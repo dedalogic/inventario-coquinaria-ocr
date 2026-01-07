@@ -118,60 +118,98 @@ function procesarTextoGuia(texto) {
   }
 
   // ===== DETECTAR PRODUCTOS =====
-  // Buscar la línea que contiene "CÓDIGO" para saber dónde empieza la tabla
-  let indiceTabla = -1;
+  // Estrategia: Buscar índices de las palabras clave y extraer valores
+  
+  let indiceCodigo = -1;
+  let indiceDescripcion = -1;
+  let indiceCantidad = -1;
+  
+  // Encontrar los índices de los encabezados de columna
   for (let i = 0; i < lineas.length; i++) {
-    if (lineas[i].match(/^C[OÓ]DIGO\s*$/i) || lineas[i].match(/C[OÓ]DIGO.*DESCRIPCI[OÓ]N/i)) {
-      indiceTabla = i;
-      break;
+    const linea = lineas[i];
+    
+    if (linea.match(/^C[OÓ]DIGO$/i)) {
+      indiceCodigo = i;
+    }
+    if (linea.match(/^DESCRIPCI[OÓ]N$/i)) {
+      indiceDescripcion = i;
+    }
+    if (linea.match(/^CANTIDAD$/i)) {
+      indiceCantidad = i;
     }
   }
 
-  if (indiceTabla === -1) {
-    // Si no encuentra "CÓDIGO" solo, buscar cualquier línea con ese patrón
-    for (let i = 0; i < lineas.length; i++) {
-      if (lineas[i].match(/C[OÓ]DIGO/i)) {
-        indiceTabla = i;
+  // Si encontramos los 3 encabezados, extraer los valores
+  if (indiceCodigo > 0 && indiceDescripcion > 0 && indiceCantidad > 0) {
+    // Buscar el código (siguiente línea después de "CÓDIGO")
+    let codigo = '';
+    for (let i = indiceCodigo + 1; i < lineas.length; i++) {
+      if (lineas[i].match(/^\d{4,5}$/)) {
+        codigo = lineas[i];
         break;
       }
     }
+    
+    // Buscar la descripción (siguiente línea después de "DESCRIPCIÓN")
+    let descripcion = '';
+    for (let i = indiceDescripcion + 1; i < lineas.length; i++) {
+      const linea = lineas[i];
+      // La descripción es texto, no números puros
+      if (linea.length > 3 && !linea.match(/^[\d.,]+$/) && !linea.match(/^(Ciudad|Comuna|Puerto|Nave|Nombre|Rut|Patente)/i)) {
+        descripcion = linea;
+        break;
+      }
+    }
+    
+    // Buscar la cantidad (siguiente línea después de "CANTIDAD")
+    let cantidad = 0;
+    for (let i = indiceCantidad + 1; i < Math.min(indiceCantidad + 5, lineas.length); i++) {
+      const linea = lineas[i];
+      if (linea.match(/^\d{1,4}$/)) {
+        const num = parseInt(linea);
+        if (num > 0 && num < 10000) {
+          cantidad = num;
+          break;
+        }
+      }
+    }
+    
+    // Si encontramos los 3 valores, agregar el producto
+    if (codigo && descripcion && cantidad > 0) {
+      productos.push({
+        codigo: codigo,
+        descripcion: descripcion,
+        cantidad: cantidad
+      });
+    }
   }
 
-  // Procesar desde la línea después de "CÓDIGO" hasta encontrar algo que no sea producto
-  if (indiceTabla >= 0) {
-    for (let i = indiceTabla + 1; i < lineas.length; i++) {
+  // MÉTODO ALTERNATIVO: Si no funcionó el anterior, buscar por proximidad
+  if (productos.length === 0) {
+    // Buscar códigos de 4-5 dígitos que estén solos en una línea
+    for (let i = 0; i < lineas.length; i++) {
       const linea = lineas[i];
       
-      // Detener si encontramos el fin de la tabla
-      if (linea.match(/Total\s+Unidades|Patente|Puerto|Nave\s+Transportadora/i)) {
-        break;
-      }
-      
-      // Buscar líneas que empiecen con 4 o 5 dígitos (código de producto)
-      const codigoMatch = linea.match(/^(\d{4,5})\s*$/);
-      
-      if (codigoMatch) {
-        // El código está solo en una línea, buscar descripción y cantidad en las siguientes
-        const codigo = codigoMatch[1];
+      if (linea.match(/^\d{4,5}$/)) {
+        const codigo = linea;
         let descripcion = '';
         let cantidad = 0;
         
-        // Buscar en las siguientes líneas
-        for (let j = i + 1; j < Math.min(i + 5, lineas.length); j++) {
+        // Buscar descripción en las siguientes líneas (texto largo)
+        for (let j = i + 1; j < Math.min(i + 10, lineas.length); j++) {
           const siguienteLinea = lineas[j];
           
-          // Si encuentra otra línea con código, detener
-          if (siguienteLinea.match(/^\d{4,5}\s*$/)) {
+          if (siguienteLinea.length > 10 && !siguienteLinea.match(/^[\d.,]+$/) && !siguienteLinea.match(/CÓDIGO|DESCRIPCI|CANTIDAD|Ciudad|Comuna/i)) {
+            descripcion = siguienteLinea;
             break;
           }
+        }
+        
+        // Buscar cantidad después de la descripción (número entre 1-999)
+        for (let j = i + 1; j < Math.min(i + 15, lineas.length); j++) {
+          const siguienteLinea = lineas[j];
           
-          // Si la línea tiene texto y números, podría ser descripción + cantidad
-          if (descripcion === '' && siguienteLinea.length > 3 && !siguienteLinea.match(/^\d+$/)) {
-            descripcion = siguienteLinea;
-          }
-          
-          // Buscar la cantidad (número solo, entre 1 y 999)
-          if (cantidad === 0 && siguienteLinea.match(/^\d{1,3}$/)) {
+          if (siguienteLinea.match(/^\d{1,3}$/)) {
             const num = parseInt(siguienteLinea);
             if (num > 0 && num < 1000) {
               cantidad = num;
@@ -180,60 +218,17 @@ function procesarTextoGuia(texto) {
           }
         }
         
-        if (descripcion && cantidad > 0) {
-          productos.push({
-            codigo: codigo,
-            descripcion: descripcion,
-            cantidad: cantidad
-          });
-        }
-      } else {
-        // Intentar detectar si todo está en una sola línea
-        // Formato: CÓDIGO DESCRIPCIÓN CANTIDAD P.UNITARIO TOTAL
-        const match = linea.match(/^(\d{4,5})\s+(.+?)\s+(\d{1,3})\s+[\d.,]+\s+[\d.,]+$/);
-        
-        if (match) {
-          const codigo = match[1];
-          const descripcion = match[2].trim();
-          const cantidad = parseInt(match[3]);
-          
-          if (cantidad > 0 && cantidad < 1000 && descripcion.length > 3) {
+        // Si encontramos código + descripción + cantidad, agregarlo
+        if (codigo && descripcion && cantidad > 0) {
+          // Verificar que no sea una dirección o teléfono
+          if (!descripcion.match(/KITCHEN|KENNEDY|Telefon|RUT|DIRECCI/i)) {
             productos.push({
               codigo: codigo,
               descripcion: descripcion,
               cantidad: cantidad
             });
+            break; // Solo tomar el primer producto encontrado
           }
-        }
-      }
-    }
-  }
-
-  // Si no se encontraron productos con el método anterior, buscar de forma más agresiva
-  if (productos.length === 0) {
-    for (let i = 0; i < lineas.length; i++) {
-      const linea = lineas[i];
-      
-      // Saltar líneas que claramente no son productos
-      if (linea.match(/KITCHEN|RUT|GUIA|DIRECCI|COMUNA|FECHA|ORDEN|Ciudad|Tel|SEÑORES|Total\s+Unidades/i)) {
-        continue;
-      }
-      
-      // Buscar patrón: código de 4-5 dígitos + texto + números
-      const match = linea.match(/(\d{4,5})\s+(.+?)\s+(\d{1,3})\s+[\d.,]+/);
-      
-      if (match) {
-        const codigo = match[1];
-        const descripcion = match[2].trim();
-        const cantidad = parseInt(match[3]);
-        
-        // Validar que no sea una línea de encabezado o datos administrativos
-        if (cantidad > 0 && cantidad < 1000 && descripcion.length > 5 && !descripcion.match(/CÓDIGO|DESCRIPCI|CANTIDAD/i)) {
-          productos.push({
-            codigo: codigo,
-            descripcion: descripcion,
-            cantidad: cantidad
-          });
         }
       }
     }
