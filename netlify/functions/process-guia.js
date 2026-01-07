@@ -65,8 +65,6 @@ exports.handler = async (event) => {
     }
 
     const fullText = detections[0].description;
-    console.log('Texto completo detectado:', fullText);
-
     const resultado = procesarTextoGuia(fullText);
 
     return {
@@ -99,7 +97,7 @@ function procesarTextoGuia(texto) {
   let productos = [];
   let fechaEmision = '';
 
-  // ===== DETECTAR NÚMERO DE GUÍA =====
+  // Detectar número de guía
   const patronesGuia = [
     /N[°º\s]*(\d{10})/i,
     /GUIA.*?(\d{10})/i,
@@ -113,118 +111,70 @@ function procesarTextoGuia(texto) {
     }
   }
 
-  // ===== DETECTAR FECHA DE EMISIÓN =====
+  // Detectar fecha de emisión
   const fechaMatch = texto.match(/FECHA\s+EMISI[OÓ]N\s*[:\s]*(\d{2}\/\d{2}\/\d{4})/i);
   if (fechaMatch) {
     fechaEmision = fechaMatch[1];
   }
 
-  console.log('Número de guía:', numeroGuia);
-  console.log('Fecha emisión:', fechaEmision);
-
-  // ===== DETECTAR PRODUCTOS =====
+  // MÉTODO SIMPLIFICADO: Buscar cualquier línea con patrón de producto
+  // Formato esperado: 80991 Set 3 cuchillos para quesos Coquinaria 4 16.798 67.193
   
-  // MÉTODO 1: Buscar la tabla de productos específicamente
-  // Primero, encontrar dónde empieza y termina la tabla
-  let enTabla = false;
-  let lineaInicio = -1;
-  let lineaFin = lineas.length;
-
   for (let i = 0; i < lineas.length; i++) {
     const linea = lineas[i];
     
-    // Detectar inicio de tabla (encabezado con CÓDIGO, DESCRIPCIÓN, CANTIDAD)
-    if (linea.match(/C[OÓ]DIGO.*DESCRIPCI[OÓ]N.*CANTIDAD/i)) {
-      enTabla = true;
-      lineaInicio = i + 1;
-      console.log('Inicio de tabla detectado en línea:', i);
+    // Saltar líneas que claramente NO son productos
+    if (linea.match(/KITCHEN|RUT|GUIA|DIRECCI|COMUNA|FECHA|ORDEN|NRO|Carga|Ciudad|Tel|Patente|Puerto|Contenedor|Booking|Total\s+Unidades/i)) {
       continue;
     }
     
-    // Detectar fin de tabla (Total Unidades, Patente, etc)
-    if (enTabla && linea.match(/Total\s+Unidades|Patente|Nro\s+Contenedor|Puerto/i)) {
-      lineaFin = i;
-      console.log('Fin de tabla detectado en línea:', i);
-      break;
-    }
-  }
-
-  // Si encontramos la tabla, procesar solo esas líneas
-  if (lineaInicio > 0) {
-    console.log('Procesando líneas de tabla desde', lineaInicio, 'hasta', lineaFin);
-    
-    for (let i = lineaInicio; i < lineaFin; i++) {
-      const linea = lineas[i];
+    // Buscar líneas que empiecen con exactamente 5 dígitos
+    if (/^\d{5}\s/.test(linea)) {
+      // Intentar extraer: CÓDIGO + DESCRIPCIÓN + CANTIDAD + decimales
       
-      // Patrón mejorado para detectar productos en la tabla
-      // Formato: CÓDIGO (5 dígitos) + DESCRIPCIÓN + CANTIDAD + números decimales
-      const match = linea.match(/^(\d{5})\s+(.+?)\s+(\d+)\s+[\d.,]+\s+[\d.,]+$/);
+      // Patrón más flexible: código de 5 dígitos, texto, luego números
+      const match = linea.match(/^(\d{5})\s+(.+?)\s+(\d+)\s+[\d.,]+/);
       
       if (match) {
         const codigo = match[1];
-        let descripcion = match[2].trim();
+        const descripcion = match[2].trim();
         const cantidad = parseInt(match[3]);
         
-        // Limpiar descripción de palabras clave que no son parte del nombre
-        descripcion = descripcion
-          .replace(/^(Set|Juego|Kit)\s*/i, '') // Remover prefijos comunes al inicio
-          .trim();
-        
-        if (cantidad > 0 && cantidad < 10000) { // Validar cantidad razonable
+        // Validar que la cantidad sea razonable (no es un precio)
+        if (cantidad > 0 && cantidad < 1000) {
           productos.push({
             codigo: codigo,
             descripcion: descripcion,
             cantidad: cantidad
           });
-          console.log('Producto detectado:', { codigo, descripcion, cantidad });
         }
-      }
-    }
-  }
-
-  // MÉTODO 2: Si no se encontraron productos en la tabla, buscar por patrón más flexible
-  if (productos.length === 0) {
-    console.log('No se encontraron productos en tabla, buscando con patrón flexible...');
-    
-    // Buscar líneas que empiecen con 5 dígitos
-    for (let i = 0; i < lineas.length; i++) {
-      const linea = lineas[i];
-      
-      // Saltar líneas que claramente no son productos
-      if (linea.match(/ORDEN|NRO|Carga|FECHA|EMISI|RUT|DIRECCI|COMUNA|Ciudad|Tel/i)) {
-        continue;
-      }
-      
-      // Buscar patrón: 5 dígitos + texto + número
-      const match = linea.match(/^(\d{5})\s+(.+)/);
-      
-      if (match) {
-        const codigo = match[1];
-        const resto = match[2];
-        
-        // Intentar extraer cantidad (número entre 1 y 4 dígitos antes de decimales)
-        const cantMatch = resto.match(/\s+(\d{1,4})\s+[\d.,]+/);
-        
-        if (cantMatch) {
-          const cantidad = parseInt(cantMatch[1]);
+      } else {
+        // Si no coincide con el patrón estricto, intentar patrón más flexible
+        const partes = linea.split(/\s+/);
+        if (partes.length >= 3) {
+          const codigo = partes[0];
           
-          // Extraer descripción (todo antes de la cantidad)
-          const descripcion = resto.substring(0, resto.indexOf(cantMatch[0])).trim();
-          
-          if (cantidad > 0 && cantidad < 10000 && descripcion.length > 3) {
-            productos.push({
-              codigo: codigo,
-              descripcion: descripcion,
-              cantidad: cantidad
-            });
-            console.log('Producto detectado (método flexible):', { codigo, descripcion, cantidad });
+          // Buscar el primer número que podría ser cantidad (después de la descripción)
+          for (let j = partes.length - 1; j >= 1; j--) {
+            const num = parseInt(partes[j]);
+            if (!isNaN(num) && num > 0 && num < 1000 && partes[j].length <= 4) {
+              // Este podría ser la cantidad
+              const descripcion = partes.slice(1, j).join(' ');
+              
+              if (descripcion.length > 3) {
+                productos.push({
+                  codigo: codigo,
+                  descripcion: descripcion,
+                  cantidad: num
+                });
+                break;
+              }
+            }
           }
         }
       }
     }
   }
-
-  console.log('Total de productos detectados:', productos.length);
 
   return {
     numeroGuia,
