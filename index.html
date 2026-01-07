@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Inventario Coquinaria</title>
+
+    <link rel="manifest" href="/manifest.json">
+    <meta name="theme-color" content="#4a0404">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --header-bg-gradient: linear-gradient(135deg, #4a0404 0%, #2c0202 100%);
+            --accent-burdeo: #5e0808;
+            --text-rosa-palo: #b85c67;
+            --text-primary: #1e293b;
+            --text-secondary: #64748b;
+            --body-bg: #f8fafc;
+            --card-bg: #ffffff;
+            --border-light: #e2e8f0;
+            --color-green: #059669;
+            --progress-color: #27ae60;
+            
+            /* Colores Pantone */
+            --pantone-7747c: #2F5C39;
+            --pantone-131c: #CC8A00;
+            --pantone-2379c: #C31F75;
+            
+            --btn-cta-gradient: linear-gradient(135deg, #d48790 0%, #b85c67 100%); 
+            --btn-cta-shadow: rgba(184, 92, 103, 0.4);
+
+            --header-height: 75px; 
+            --controls-height: 115px; 
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--body-bg);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding-top: calc(var(--header-height) + var(--controls-height)); 
+            padding-bottom: 90px; 
+            font-weight: 400;
+            overflow-x: hidden;
+        }
+
+        /* HEADER */
+        .header {
+            background: var(--header-bg-gradient);
+            height: var(--header-height);
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 24px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .header-logo { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 200; color: white; letter-spacing: 2px; text-transform: uppercase; }
+        .header-actions { display: flex; flex-direction: column; align-items: flex-end; color: rgba(255, 255, 255, 0.95); }
+        .header-date { font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 6px; }
+        #lastSavedIndicator { font-size: 10px; opacity: 0.8; margin-top: 3px; font-weight: 300; }
+        .progress-line { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,0.1); }
+        .progress-fill { height: 100%; background: #4ade80; width: 0%; transition: width 0.5s; }
+
+        /* CONTROLES */
+        .sticky-controls {
+            position: fixed; top: var(--header-height); left: 0; right: 0;
+            height: var(--controls-height); background: var(--body-bg); z-index: 900;
+            display: flex; flex-direction: column; justify-content: center;
+            border-bottom: 1px solid rgba(0,0,0,0.05); box-shadow: 0 4px 6px -4px rgba(0,0,0,0.05);
+        }
+        .search-container { padding: 10px 20px 8px 20px; }
+        .search-wrapper { position: relative; width: 100%; }
+        .search-input { width: 100%; background: white; border: 1px solid var(--border-light); padding: 10px 40px; border-radius: 12px; font-size: 14px; height: 44px; transition: all 0.2s; outline: none; }
+        .search-input:focus { border-color: var(--text-rosa-palo); box-shadow: 0 0 0 3px rgba(184, 92, 103, 0.1); }
+        .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; width: 18px; }
+        .clear-search { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background:none; border:none; font-size:16px; color:#999; display:none; padding:5px; }
+
+        .menu-scroll { display: flex; overflow-x: auto; gap: 8px; padding: 0 20px 10px 20px; scrollbar-width: none; align-items: center; height: 50px; }
+        .menu-scroll::-webkit-scrollbar { display: none; }
+
+        .menu-chip { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid var(--border-light); padding: 8px 16px; border-radius: 12px; font-size: 13px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.03); flex-shrink: 0; height: 38px; }
+        .menu-chip.active { background: var(--text-rosa-palo); color: white; border-color: var(--text-rosa-palo); box-shadow: 0 4px 10px rgba(184, 92, 103, 0.3); font-weight: 600; }
+        /* Colores Específicos */
+        .menu-chip.count-active { background: var(--pantone-7747c); color: white; border-color: var(--pantone-7747c); box-shadow: 0 4px 10px rgba(47, 92, 57, 0.3); }
+        .menu-chip.recep-active { background: var(--pantone-131c); color: white; border-color: var(--pantone-131c); box-shadow: 0 4px 10px rgba(204, 138, 0, 0.3); }
+        .menu-chip.sugg-active { background: var(--pantone-2379c); color: white; border-color: var(--pantone-2379c); box-shadow: 0 4px 10px rgba(195, 31, 117, 0.3); }
+        
+        .menu-chip svg { width: 16px; height: 16px; stroke-width: 2; }
+        .menu-chip:active { transform: scale(0.97); }
+
+        /* LISTA */
+        .products-list { padding: 0 20px; }
+        .product-card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid transparent; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.1s; }
+        .product-card:active { transform: scale(0.99); background-color: #fafafa; }
+        .product-card.counted { border-left: 4px solid var(--pantone-7747c); }
+        .product-card.reception-counted { border-left: 4px solid var(--pantone-131c); }
+        .product-card.suggestion-counted { border-left: 4px solid var(--pantone-2379c); }
+
+        .product-info { flex: 1; margin-right: 15px; }
+        .product-info h4 { font-size: 14px; color: var(--text-primary); margin-bottom: 4px; line-height: 1.4; font-weight: 600; }
+        .product-sku { font-size: 11px; color: var(--text-secondary); background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; display: inline-block; font-weight: 500; }
+        
+        .stock-control { display: flex; align-items: center; gap: 5px; background: #f8fafc; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; }
+        .stock-control.count-mode { border-color: var(--pantone-7747c); background: #f0fdf4; }
+        .stock-control.reception-mode { border-color: var(--pantone-131c); background: #fffbf0; }
+        .stock-control.suggestion-mode { border-color: var(--pantone-2379c); background: #fdf2f8; }
+
+        .btn-stock { width: 30px; height: 30px; border: none; background: white; border-radius: 6px; color: var(--text-primary); font-weight: 700; font-size: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-stock:active { background: #e2e8f0; }
+        .stock-input { width: 34px; border: none; background: transparent; text-align: center; font-weight: 700; font-size: 15px; color: var(--text-primary); }
+        .catalog-display { font-size: 13px; font-weight: 600; color: #94a3b8; min-width: 40px; text-align: center; }
+
+        /* Document Input (Recepción) */
+        .doc-input-container {
+            padding: 10px 20px;
+            background: #fffbf0;
+            border-bottom: 1px solid #f0e6d2;
+            margin-bottom: 10px;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .doc-input {
+            width: 100%; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px;
+            font-size: 14px; outline: none;
+        }
+
+        /* CTA */
+        .cta-container { padding: 20px; padding-bottom: 40px; display: flex; gap: 10px; flex-direction: column; }
+        .btn-cta { width: 100%; padding: 16px; border: none; border-radius: 12px; font-size: 15px; font-weight: 600; color: white; cursor: pointer; box-shadow: 0 4px 15px var(--btn-cta-shadow); background: var(--btn-cta-gradient); transition: transform 0.1s; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .btn-cta:active { transform: scale(0.98); }
+        .btn-cta.secondary { background: white; color: var(--text-primary); border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
+
+        /* OVERLAY */
+        .product-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(8px); z-index: 3000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+        .product-overlay.active { opacity: 1; pointer-events: auto; }
+        .detail-card { background: white; width: 90%; max-width: 400px; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transform: scale(0.95); transition: transform 0.2s; max-height: 85vh; display: flex; flex-direction: column; }
+        .product-overlay.active .detail-card { transform: scale(1); }
+        .detail-image-box { width: 100%; height: 260px; background: #fff; display: flex; align-items: center; justify-content: center; position: relative; border-bottom: 1px solid #f1f5f9; }
+        .detail-img { width: 100%; height: 100%; object-fit: contain; padding: 20px; }
+        .detail-placeholder { font-size: 50px; opacity: 0.1; }
+        .detail-content { padding: 25px; overflow-y: auto; }
+        .detail-brand { font-size: 11px; text-transform: uppercase; color: var(--text-rosa-palo); font-weight: 700; letter-spacing: 1px; margin-bottom: 5px; }
+        .detail-origin { font-size: 10px; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase; margin-left: 8px; }
+        .detail-title { font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1.3; margin-bottom: 8px; }
+        .detail-sku { font-size: 13px; color: #94a3b8; font-family: monospace; margin-bottom: 15px; }
+        .detail-desc { font-size: 15px; line-height: 1.6; color: #475569; }
+        .close-btn { position: absolute; top: 15px; right: 15px; width: 36px; height: 36px; border-radius: 50%; background: rgba(255,255,255,0.9); border: none; font-size: 20px; color: #333; cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 10; }
+
+        /* NAV */
+        .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; background: var(--nav-bg); height: 80px; display: flex; justify-content: space-around; align-items: flex-start; padding-top: 12px; border-top: 1px solid var(--border-light); z-index: 2000; backdrop-filter: blur(10px); }
+        .nav-item { background: none; border: none; color: #94a3b8; display: flex; flex-direction: column; align-items: center; gap: 6px; font-size: 11px; font-weight: 500; cursor: pointer; }
+        .nav-item svg { width: 24px; height: 24px; stroke-width: 2; }
+        .nav-item.active { color: var(--accent-burdeo); }
+        .nav-item.active svg { stroke-width: 2.5; }
+
+        .floating-scroll-btn { position: fixed; bottom: 100px; right: 20px; width: 30px; height: 30px; background: var(--text-rosa-palo); color: white; border: none; border-radius: 50%; box-shadow: 0 4px 15px rgba(184, 92, 103, 0.4); display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; z-index: 1900; transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); opacity: 0; pointer-events: none; transform: translateY(20px); }
+        .floating-scroll-btn.visible { opacity: 1; pointer-events: auto; transform: translateY(0); }
+        .floating-scroll-btn svg { width: 16px; height: 16px; stroke-width: 2.5; }
+
+        .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 5000; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
+        .toast.show { opacity: 1; }
+        .empty-state { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
+        #dateInput { position: absolute; opacity: 0; width: 0; height: 0; bottom: 0; right: 0; pointer-events: none; }
+        .history-item { background: white; padding: 18px; border-radius: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        
+        #scanInput { display: none; }
+        
+        /* Modal Styles */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 4000; align-items: center; justify-content: center; }
+        .modal.active { display: flex; }
+        .modal-content { background: white; padding: 25px; border-radius: 16px; width: 90%; max-width: 350px; text-align: center; }
+        .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text-primary); }
+        .modal-actions { display: flex; flex-direction: column; gap: 10px; }
+    </style>
+</head>
+<body>
+
+    <input type="file" id="fileImport" accept=".csv,.txt" style="display:none" onchange="handleFileImport(this)">
+    <!-- Input para cámara/archivo de imagen -->
+    <input type="file" id="scanInput" accept="image/*" capture="environment" onchange="handleScan(this)">
+    
+    <!-- HEADER -->
+    <div class="header">
+        <div class="header-logo">COQUINARIA</div>
+        <div class="header-actions">
+            <!-- Selector de Fecha Trigger -->
+            <div class="header-date" onclick="openDate()">
+                <span id="dateDisplay">--/--</span>
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
+            </div>
+            <div id="lastSavedIndicator">Guardado</div>
+        </div>
+        <input type="date" id="dateInput">
+        <div class="progress-line"><div class="progress-fill" id="progressBar"></div></div>
+    </div>
+
+    <!-- STICKY TOOLBAR (Menú dinámico) -->
+    <div class="sticky-controls" id="stickyControls">
+        <!-- Search always visible -->
+        <div class="search-container">
+            <div class="search-wrapper">
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <input type="text" class="search-input" id="searchInput" placeholder="Buscar producto..." onkeyup="handleSearch(this)">
+                <button class="clear-search" onclick="clearSearch()">✕</button>
+            </div>
+        </div>
+        <!-- Scrollable Menu -->
+        <div id="toolbarMenu" class="menu-scroll"></div>
+    </div>
+
+    <!-- MAIN PRODUCT LIST -->
+    <div id="view-products">
+        <div id="docInputContainer"></div> <!-- Contenedor para input de documento en recepción -->
+        <div id="productsContainer" class="products-list"></div>
+        <div class="cta-container" id="ctaContainer"></div>
+        <button id="floatingSaveBtn" class="floating-scroll-btn" onclick="handleFloatingClick()">
+            <svg id="floatingIcon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" /></svg>
+        </button>
+    </div>
+
+    <!-- HISTORY VIEW -->
+    <div id="view-history" style="display:none; padding: 20px;">
+        <h3 style="margin-bottom:15px; color:#1e293b; font-size:18px;">Historial</h3>
+        <div id="historyContent"></div>
+    </div>
+
+    <!-- PRODUCT DETAIL OVERLAY -->
+    <div id="productOverlay" class="product-overlay">
+        <div class="detail-card" id="detailCard">
+            <button class="close-btn" onclick="closeOverlay()">✕</button>
+            <div class="detail-image-box">
+                <img id="dImg" class="detail-img" src="" style="display:none">
+                <div id="dPlace" class="detail-placeholder">📷</div>
+            </div>
+            <div class="detail-content">
+                <div style="display:flex; align-items:center; margin-bottom:5px;">
+                    <div class="detail-brand" id="dBrand">MARCA</div>
+                    <div class="detail-origin" id="dOrigin" style="display:none;"></div>
+                </div>
+                <div class="detail-title" id="dName">Producto</div>
+                <div class="detail-sku">SKU: <span id="dSku"></span></div>
+                <div class="detail-desc" id="dDesc">Descripción...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SHARE MODAL -->
+    <div id="shareModal" class="modal">
+        <div class="modal-content">
+            <h3 class="modal-title" id="shareModalTitle">Compartir Reporte</h3>
+            <div class="modal-actions">
+                <button class="btn-cta" onclick="executeShare('whatsapp')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M13.601 2.326A7.854 7.854 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.057 3.965L0 16l4.204-1.102a7.933 7.933 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.898 7.898 0 0 0 13.6 2.326zM7.994 14.521a6.573 6.573 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.557 6.557 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592zm3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.775-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.985-1.175-1.103-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.729.729 0 0 0-.529.247c-.182.198-.691.677-.691 1.654 0 .977.71 1.916.81 2.049.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.904.129 1.246.08.38-.058 1.171-.48 1.338-.943.164-.464.164-.86.114-.943-.049-.084-.182-.133-.38-.232z"/></svg>
+                    Enviar por WhatsApp
+                </button>
+                <button class="btn-cta secondary" onclick="executeShare('email')">
+                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2zm13 2.383-4.758 2.855L15 11.114v-5.73zm-.034 6.878L9.271 8.82 8 9.583 6.728 8.82l-5.694 3.44A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.739zM1 11.114l4.758-2.876L1 5.383v5.73z"/></svg>
+                    Enviar por Correo
+                </button>
+                <button class="btn-cta secondary" style="border:none; color:#64748b; margin-top:5px;" onclick="closeShareModal()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav">
+        <button class="nav-item active" id="nav-catalog" onclick="switchMainView('catalog')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
+            <span>Catálogo</span>
+        </button>
+        <button class="nav-item" id="nav-stock" onclick="switchMainView('stock')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
+            <span>Stock</span>
+        </button>
+        <button class="nav-item" id="nav-history" onclick="switchMainView('history')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+            <span>Historial</span>
+        </button>
+    </div>
+
+    <div id="toast" class="toast"></div>
+
+    <script>
+        // --- CATEGORIZED DATA (COMPLETA) ---
+        const rawProducts = [
+            {sku:"80000", brand:"Coquinaria", name:"Cuchara de té Coquinaria", category: "Té y Café", description:"Esta cuchara de té con mango en color crema sofisticado combina elegancia y funcionalidad. Fabricada con un resistente mango de ABS y un cuerpo de acero inoxidable, ofrece durabilidad y estilo. Perfecta para medir con precisión té suelto, azúcar o miel, también es ideal para revolver infusiones, cafés o preparar postres. Su diseño ergonómico asegura un agarre cómodo, mientras su acabado refinado realza cualquier set de mesa o cocina.", image: "https://www.kitchencenter.cl/cdn/shop/files/80000_1_800x.jpg?v=1733229871"},
+            // ... (Se incluyen todos los productos de Coquinaria, A L'Olivier, Cipriani, Danica y Fauchon)
+            // NOTA: HE INSERTADO LA LISTA COMPLETA A CONTINUACIÓN
+            {sku:"80001", brand:"Coquinaria", name:"Cuchillo aperitivo Coquinaria", category: "Aperitivo", description:"El cuchillo de aperitivo Coquinaria combina un elegante mango de ABS resistente en color hueso con un afilado filo de acero inoxidable."},
+            {sku:"80002", brand:"Coquinaria", name:"Cuchillo para pan Coquinaria", category: "Mesa y Cocina", description:"El cuchillo para pan Coquinaria, con mango de ABS resistente en elegante color hueso y detalles en acero inoxidable, es perfecto para cortar panes con facilidad."},
+            {sku:"80003", brand:"Coquinaria", name:"Espátula Coquinaria", category: "Aperitivo", description:"La espátula de aperitivo Coquinaria, con mango de ABS resistente en color hueso y detalles en acero inoxidable, es ideal para servir y presentar aperitivos con elegancia."},
+            {sku:"80004", brand:"Coquinaria", name:"Trincho para BBQ Coquinaria", category: "Mesa y Cocina", description:"Presentamos el trincho Coquinaria, con mango de ABS resistente en elegante color hueso y detalles en acero inoxidable."},
+            {sku:"80005", brand:"Coquinaria", name:"Cuchillo para BBQ Coquinaria", category: "Mesa y Cocina", description:"El cuchillo de parrilla Coquinaria combina un mango de ABS resistente en elegante color hueso con un filo afilado de acero inoxidable."},
+            {sku:"80006", brand:"Coquinaria", name:"Cuchara para Servir Coquinaria", category: "Mesa y Cocina", description:"Descubre las cucharas para servir de Coquinaria, con mango de ABS resistente en elegante color hueso y detalles en acero inoxidable."},
+            {sku:"80007", brand:"Coquinaria", name:"Tenedor para Servir Coquinaria", category: "Mesa y Cocina", description:"Tenedor para servir de Coquinaria, con mango de ABS resistente en elegante color hueso."},
+            {sku:"80008", brand:"Coquinaria", name:"Aceite Oliva Extra Virgen en Spray 250ml", category: "Aderezos y Condimentos", description:"Aceite de oliva en spray para uso diario."},
+            {sku:"80009", brand:"Coquinaria", name:"Aceto Di Modena Spray 250 ml", category: "Aderezos y Condimentos", description:"Aceto balsámico de Módena en formato spray."},
+            {sku:"80010", brand:"Coquinaria", name:"Juego de Vajilla Blanco 16 piezas", category: "Mesa y Cocina", description:"Set de vajilla Coquinaria en porcelana blanca."},
+            {sku:"80011", brand:"Coquinaria", name:"Juego de Vajilla Gris 20 piezas", category: "Mesa y Cocina", description:"Juego de Vajillas Gris Coquinaria de 20 piezas."},
+            {sku:"80012", brand:"Coquinaria", name:"Tabla quesos 25 cms marmol", category: "Aperitivo", description:"Tabla elegante de mármol para quesos."},
+            {sku:"80013", brand:"Coquinaria", name:"Set 3 cuchillos para quesos", category: "Aperitivo", description:"Set de cuchillos de aperitivo de mármol color negro."},
+            {sku:"80014", brand:"Coquinaria", name:"Enfriador de vinos marmol", category: "Bar y Mixología", description:"Enfriador de vinos de mármol color negro."},
+            {sku:"80015", brand:"Coquinaria", name:"Coctelera Coquinaria", category: "Bar y Mixología", description:"Coctelera de diseño simple y funcional."},
+            {sku:"80016", brand:"Coquinaria", name:"Descorchador de vinos", category: "Bar y Mixología", description:"Descorchador de vino elegante y eficiente."},
+            {sku:"80017", brand:"Coquinaria", name:"Set 5 accesorios Mixología", category: "Bar y Mixología", description:"Kit de herramientas esenciales para cóctel en acabado Matt Black."},
+            {sku:"80018", brand:"Coquinaria", name:"Hielera Coquinaria", category: "Bar y Mixología", description:"Hielera con doble pared de aislamiento."},
+            {sku:"80019", brand:"Coquinaria", name:"Set Molinillos Sal & Pimienta Acero", category: "Mesa y Cocina", description:"Set de molinillos para sal y pimienta de acero inoxidable."},
+            {sku:"80020", brand:"Coquinaria", name:"Set Molinillos Sal & Pimienta Madera", category: "Mesa y Cocina", description:"Set Molinillos Sal y Pimienta de madera de acacia."},
+            {sku:"80021", brand:"Coquinaria", name:"Set Abridor vinos y bomba vacío", category: "Bar y Mixología", description:"Set de abridor y bomba de vacío para vinos."},
+            {sku:"80022", brand:"Coquinaria", name:"Set Sellador vinos espumantes", category: "Bar y Mixología", description:"Sellador de vinos espumantes para preservar burbujas."},
+            {sku:"80067", brand:"A L'Olivier", name:"Aceite Oliva con Albahaca 250 ml", category: "Aderezos y Condimentos", description:"El Aceite de Oliva con Albahaca 250 ml Al 'Olivier de Coquinaria combina aceite de oliva extra virgen con albahaca fresca.", origin: "Francia"},
+            {sku:"80068", brand:"A L'Olivier", name:"Aceite Oliva Extra Virgen con Trufa Negra 250 ml", category: "Aderezos y Condimentos", description:"El sabor de las setas y la trufa, infundido en un aceite de oliva virgen extra y realzado con un aroma de trufa.", origin: "Francia"},
+            {sku:"80069", brand:"A L'Olivier", name:"Aceite Oliva Extra Virgen con Pimiento Espelette 250 ml", category: "Aderezos y Condimentos", description:"Aceite de Oliva Extra Virgen con Pimiento de Espelette 250 ml Al 'Olivier: Fusión única de aceite de oliva virgen extra y chile vasco de Espelette.", origin: "Francia"},
+            {sku:"80070", brand:"A L'Olivier", name:"Aceite Oliva con Jengibre Peruano 150 ml", category: "Aderezos y Condimentos", description:"Las notas especiadas, cálidas y ligeramente alimonadas del jengibre forman un dúo perfecto con el aceite de oliva.", origin: "Francia"},
+            {sku:"80071", brand:"A L'Olivier", name:"Aceite Oliva con Mandarinas 150 ml", category: "Aderezos y Condimentos", description:"Descubra nuestro aceite de oliva de clementina del Pays de Niza. La región de Niza, con su clima soleado y sus suelos en terrazas, confiere a este pequeño cítrico su sabor excepcional.", origin: "Francia"},
+            {sku:"80072", brand:"A L'Olivier", name:"Aceite Oliva con Ajo 150 ml", category: "Aderezos y Condimentos", description:"Los sabores picantes y especiados del ajo silvestre dan carácter a nuestro aceite de oliva infusionado. El intenso sabor del ajo silvestre es similar al del cebollino y seguramente agregará un toque de sabor a tus platos favoritos.", origin: "Francia"},
+            {sku:"80075", brand:"A L'Olivier", name:"Crema De Aceto Balsámico 250 ml", category: "Aderezos y Condimentos", description:"La Crema de Aceto Balsámico 250 ml Al 'Olivier combina vinagre balsámico de Módena con mosto de uva cocido en una textura aterciopelada y un sabor agridulce perfectamente equilibrado.", origin: "Francia"},
+            {sku:"80076", brand:"A L'Olivier", name:"Vinagre con Pulpa Frambuesa 200 ml", category: "Aderezos y Condimentos", description:"El Vinagre con Pulpa de Frambuesa 200 ml Al 'Olivier combina vinagre de calidad con puré de frambuesa, logrando un equilibrio entre acidez, dulzor y frescura.", origin: "Francia"},
+            {sku:"80077", brand:"A L'Olivier", name:"Vinagre con Pulpa Mango 200 ml", category: "Aderezos y Condimentos", description:"El Vinagre con Pulpa de Mango 200 ml Al 'Olivier, elaborado con puré de mango natural, combina dulzura suave, notas florales y una ligera acidez en una textura cremosa y versátil.", origin: "Francia"},
+            {sku:"80078", brand:"A L'Olivier", name:"Vinagre con Zucchini y Menta 200 ml", category: "Aderezos y Condimentos", description:"El Vinagre con Zucchini y Menta 200 ml Al 'Olivier fusiona el sabor suave del calabacín provenzal con la frescura herbal de la menta, creando un aderezo ligero, equilibrado y aromático.", origin: "Francia"},
+            {sku:"80079", brand:"A L'Olivier", name:"Vinagreta de Piña y Albahaca 200 ml", category: "Aderezos y Condimentos", description:"La Vinagreta de Piña y Albahaca 200 ml Al 'Olivier ofrece una mezcla exótica y refrescante que combina la acidez natural de la piña con el aroma intenso de la albahaca.", origin: "Francia"},
+            {sku:"80080", brand:"A L'Olivier", name:"Vinagreta de Mango y Lemongrass 200 ml", category: "Aderezos y Condimentos", description:"Nuestro aderezo de limoncillo y mango es imprescindible para cualquiera que busque añadir un toque exótico a sus recetas. Junto con nuestros expertos, hemos encontrado la mejor combinación de sabores para aportar frescura y dulzura a tus recetas favoritas.", origin: "Francia"},
+            {sku:"80151", brand:"A L'Olivier", name:"Vinagre de higo 200ml Al Olivier", category: "Aderezos y Condimentos", description:"Atrévete a darle sabor a tus recetas con nuestro aromático vinagre de higos. La dulzura del higo despertará suavemente tu creatividad culinaria", origin: "Francia"},
+            {sku:"80152", brand:"A L'Olivier", name:"Aceite de oliva extra virgen español A L'Olivier 250ml", category: "Aderezos y Condimentos", description:"Date una vuelta por España con este aceite de oliva de Arbequina, una variedad de aceituna catalana con sabor afrutado. A cualquier aficionado le encantará este aceite de oliva con notas de alcachofa, manzana, almendra y nueces frescas.", origin: "Francia"},
+            {sku:"80236", brand:"A L'Olivier", name:"PGI Balsamic Vinegar of Modena - Bronze Quality", category: "Aderezos y Condimentos", description:"Elaborado con más del 25% de mosto de uva cocido de las siguientes variedades: Lambrusco, Sangiovese, Trebbiano, Albana, Ancellotta, Fortana y Montuni.", origin: "Italia"},
+            {sku:"80381", brand:"A L'Olivier", name:"Aceite de Oliva con Albahaca 250 ml Al Olivier", category: "Aderezos y Condimentos", description:"El Aceite de Oliva con Albahaca Al Olivier 250ml combina la suavidad del aceite de oliva de alta calidad con la frescura aromática de la albahaca recién recogida.", origin: "Francia"},
+            {sku:"80382", brand:"A L'Olivier", name:"Aceite de Oliva con Ajo 250 ml Al Olivier", category: "Aderezos y Condimentos", description:"El Aceite de Oliva con Ajo Al Olivier 250ml fusiona la suavidad del aceite de oliva de alta calidad con la intensidad aromática del ajo fresco.", origin: "Francia"},
+            {sku:"80383", brand:"A L'Olivier", name:"Aceite de Oliva con Hierbas Provenzales 250 ml Al Olivier", category: "Aderezos y Condimentos", description:"El Aceite de Oliva con Hierbas Provenzales Al Olivier 250ml combina la suavidad del aceite de oliva virgen extra con una infusión aromática de tomillo, ajedrea y romero.", origin: "Francia"},
+            {sku:"80384", brand:"A L'Olivier", name:"Aceite de Oliva para Pizza 250 ml Al Olivier", category: "Aderezos y Condimentos", description:"Aceite de Oliva para Pizza 250 ml Al Olivier combina aceite de oliva virgen extra con un delicado toque de pimientos picantes que aporta intensidad y carácter sin opacar el resto de ingredientes.", origin: "Francia"},
+            {sku:"80385", brand:"A L'Olivier", name:"Vinagre Tomate & Albahaca 200 ml Al Olivier", category: "Aderezos y Condimentos", description:"El Vinagre de Tomate & Albahaca Al Olivier 200ml une la dulzura jugosa del tomate con la intensidad aromática de la albahaca fresca, creando un aderezo gourmet de inspiración mediterránea.", origin: "Francia"},
+            {sku:"80386", brand:"A L'Olivier", name:"Vinagre Yuzu & Mandarina 200 ml Al Olivier", category: "Aderezos y Condimentos", description:"El Vinagre Yuzu & Mandarina Al Olivier 200ml combina la dulzura afrutada de la mandarina con la acidez intensa y floral del yuzu, creando un condimento vibrante y sofisticado.", origin: "Francia"},
+            {sku:"80171", brand:"Fauchon", name:"Mini Tostadas Brioche 80 grs", category: "Aperitivo", description:"Crujientes y doradas, las mini tostadas brioche FAUCHON han sido seleccionadas por su delicioso sabor. Están elaborados a partir de una mezcla de harinas, copos de cereales y semillas de lino que les aportan un sabor refinado.", origin: "Francia"},
+            {sku:"80172", brand:"Fauchon", name:"Tartina de alcachofa y queso fresco 90 gr", category: "Aperitivo", description:"La crema para untar de alcachofas Fauchon y queso crema es una receta salada artesanal elaborada con verduras frescas y productos locales.", origin: "Francia"},
+            {sku:"80173", brand:"Fauchon", name:"Tartina Pimenton Rojo y Queso Mascarpone 90gr", category: "Aperitivo", description:"La crema para untar de pimiento mascarpone Fauchon es una sabrosa crema artesanal elaborada con verduras frescas y productos locales.", origin: "Francia"},
+            {sku:"80174", brand:"Fauchon", name:"Tartina Berenjena Ricotta y Menta 90gr", category: "Aperitivo", description:"El dulzor de la berenjena combinado con la cremosidad de la ricotta, potenciada por el frescor de la menta.", origin: "Francia"},
+            {sku:"80175", brand:"Fauchon", name:"Foie Gras de Ganso y Alsacia 180 gr", category: "Gourmet", description:"Descubra el foie gras entero de oca FAUCHON, cocinado en talleres en el corazón de Estrasburgo, de forma artesanal, desde hace más de 5 generaciones.", origin: "Francia"},
+            {sku:"80176", brand:"Fauchon", name:"Foie Gras de ganso y Alsacia 200 gr", category: "Gourmet", description:"Descubra el foie gras entero de oca FAUCHON, cocinado en talleres en el corazón de Estrasburgo, de forma artesanal, desde hace más de 5 generaciones.", origin: "Francia"},
+            {sku:"80177", brand:"Fauchon", name:"Foie Gras de Ganso y Alsacia 65g", category: "Gourmet", description:"Descubra el foie gras entero de oca FAUCHON, cocinado en talleres en el corazón de Estrasburgo, de forma artesanal, desde hace más de 5 generaciones.", origin: "Francia"},
+            {sku:"80178", brand:"Fauchon", name:"Foie Gras de Ganso Alsacia y Trufa130g", category: "Gourmet", description:"La trufa negra del Périgord llega a Alsacia y ofrece sabores excepcionales. Ofrecido por FAUCHON desde sus inicios, el foie gras de oca trufado sigue siendo el centro de atención en la actualidad.", origin: "Francia"},
+            {sku:"80179", brand:"Fauchon", name:"Foie Gras Pato 90g", category: "Gourmet", description:"El Foie Gras Entero de Pato del Suroeste de FAUCHON procede de cultivo en libertad, seleccionado, elaborado y condimentado a mano.", origin: "Francia"},
+            {sku:"80180", brand:"Fauchon", name:"Foie Gras Pato 180g", category: "Gourmet", description:"El Foie Gras Entero de Pato del Suroeste de FAUCHON procede de cultivo en libertad, seleccionado, elaborado y condimentado a mano.", origin: "Francia"},
+            {sku:"80181", brand:"Fauchon", name:"Terrina Fauchon 100g", category: "Gourmet", description:"FAUCHON presenta su terrina de cerdo con setas porcini, una creación artesanal que sublima la carne de cerdo francesa cuidadosamente seleccionada.", origin: "Francia"},
+            {sku:"80182", brand:"Fauchon", name:"Terrina Vino Tinto 100g", category: "Gourmet", description:"FAUCHON presenta su terrina de cerdo con setas porcini, una creación artesanal que sublima la carne de cerdo francesa cuidadosamente seleccionada.", origin: "Francia"},
+            {sku:"80183", brand:"Fauchon", name:"Terrina de Pato 100g", category: "Gourmet", description:"FAUCHON presenta su terrina de pato y cerdo. Una creación artesanal que realza las carnes francesas cuidadosamente seleccionadas.", origin: "Francia"},
+            {sku:"80184", brand:"Fauchon", name:"Terrina Pimienta Espelette 100g", category: "Gourmet", description:"FAUCHON presenta su terrina de pimiento de Espelette, una creación artesanal elaborada con ingredientes locales: cerdo francés de etiqueta roja y pimiento de Espelette DOP.", origin: "Francia"},
+            {sku:"80185", brand:"Fauchon", name:"Infusion Petalos de Rosa 60g", category: "Té y Café", description:"Es tiempo de historias junto al fuego, de confidencias susurradas, de nubes en una luna creciente. Es hora de un capullo de rosa FAUCHON.", origin: "Francia"},
+            {sku:"80186", brand:"Fauchon", name:"Corazón bombones de Leche 75g", category: "Momentos Dulces", description:"FAUCHON le ofrece esta bonita caja de corazón magenta llena de 7 pequeños corazones de chocolate con leche rellenos de praliné de avellanas del Piamonte.", origin: "Francia"},
+            {sku:"80187", brand:"Fauchon", name:"Corazon bombones de Bitter 75g", category: "Momentos Dulces", description:"FAUCHON te ofrece esta bonita caja de corazones negra llena de 7 pequeños corazones de chocolate negro rellenos de gianduja y chips de crepes de encaje crujiente.", origin: "Francia"},
+            {sku:"80188", brand:"Fauchon", name:"Mermelada Petalos de rosa 250g", category: "Momentos Dulces", description:"El confitado de pétalos de rosa Fauchon encarna la armonía entre frescura y dulzura. Las rosas son elegidas meticulosamente para preservar la intensidad y fragancia de sus pétalos.", origin: "Francia"},
+            {sku:"80189", brand:"Fauchon", name:"Pure de Castañas 250g", category: "Momentos Dulces", description:"Las cremas de castañas FAUCHON se preparan de forma artesanal en Francia; se cuecen en calderos de cobre en pequeñas cantidades para respetar el fruto.", origin: "Francia"},
+            {sku:"80190", brand:"Fauchon", name:"Confitura de Higos 245g", category: "Momentos Dulces", description:"La mermelada de Higo Fauchon forma parte de una colección de mermeladas elaboradas con las mejores frutas francesas.", origin: "Francia"},
+            {sku:"80191", brand:"Fauchon", name:"Bolsa Fauchon", category: "Regalos", description:"Porque cada producto FAUCHON es un regalo, puedes incluir en él dos cajas de té, mermeladas, un surtido de galletas o cremas para untar.", origin: "Francia"},
+            {sku:"80347", brand:"Fauchon", name:"Lata de té en hoja Rosa & Manzana 110grs", category: "Té y Café", description:"La Lata de Té en hoja Rosa & Manzana Fauchon 110 g es una mezcla refinada que combina la fragancia floral de la rosa con el dulzor afrutado de la manzana roja madura.", origin: "Francia"},
+            {sku:"80348", brand:"Fauchon", name:"Lata de té en hoja Chai & Vainilla 130grs", category: "Té y Café", description:"La Lata de Té en Hoja Chai & Vainilla Fauchon 130g combina té negro premium con especias orientales y un delicado toque de vainilla, creando una infusión aromática, cálida y sofisticada.", origin: "Francia"},
+            {sku:"80349", brand:"Fauchon", name:"Lata de té en hoja Earl Grey & Bergamota 110grs", category: "Té y Café", description:"La Lata de Té en Hoja Earl Grey & Bergamota Fauchon 110 g ofrece una refinada fusión de té negro con vibrantes notas cítricas y florales.", origin: "Francia"},
+            {sku:"80350", brand:"Fauchon", name:"Lata de té en hoja Negro Citrus & Vainilla 100grs", category: "Té y Café", description:"La Lata de Té en hoja Negro Citrus & Vainilla Fauchon 100 g ofrece una mezcla sofisticada que une té negro Yunnan de China y Ceilán de Sri Lanka con delicados brotes de té blanco Silver Needle.", origin: "Francia"},
+            {sku:"80351", brand:"Fauchon", name:"Lata de té en hoja Rooibos Caramelo & Miel 80 grs", category: "Té y Café", description:"La Lata de Té en hoja Rooibos Caramelo & Miel Fauchon 80 g combina rooibos sudafricano con manzanilla y verbena, creando una infusión naturalmente descafeinada, perfecta para cualquier momento del día.", origin: "Francia"},
+            {sku:"80352", brand:"Fauchon", name:"Lata de Té en hoja Harmony herbal mix 35grs", category: "Té y Café", description:"La Lata de Té en hoja Harmony Herbal Mix Fauchon 35 g es una infusión orgánica que celebra el equilibrio entre frescura, bienestar y tradición botánica francesa.", origin: "Francia"},
+            {sku:"80353", brand:"Fauchon", name:"Caja 20 Teabags Chai species & Vainilla", category: "Té y Café", description:"La Caja de 20 Teabags Chai Spices & Vainilla Fauchon ofrece un té negro especiado de inspiración oriental, donde la calidez de la canela, el cardamomo y otras especias se funden con la suavidad de la vainilla.", origin: "Francia"},
+            {sku:"80354", brand:"Fauchon", name:"Caja 20 Teabags Earl Grey & Bergamota", category: "Té y Café", description:"La Caja de 20 Teabags Earl Grey & Bergamota Fauchon ofrece una variación elegante y delicada del clásico té inglés.", origin: "Francia"},
+            {sku:"80355", brand:"Fauchon", name:"Caja 20 teabags Te Verde & Jengibre", category: "Té y Café", description:"La Caja 20 Teabags Té Verde & Jengibre Fauchon combina la frescura cítrica del limón con la calidez picante del jengibre sobre una base de té verde chino.", origin: "Francia"},
+            {sku:"80356", brand:"Fauchon", name:"Caja 20 Teabags Verbena", category: "Té y Café", description:"La Caja 20 Teabags Verbena Fauchon ofrece una infusión herbal con intensas notas de limón y un delicado toque ácido, reconocida por sus propiedades digestivas y relajantes.", origin: "Francia"},
+            {sku:"80357", brand:"Fauchon", name:"Caja 20 teabags Harmony herbal mix", category: "Té y Café", description:"La Caja 20 Teabags Harmony Herbal Mix Fauchon ofrece una infusión orgánica única que equilibra frescura, bienestar y poesía botánica.", origin: "Francia"},
+            {sku:"80358", brand:"Fauchon", name:"Dulce Leche 250 grs", category: "Momentos Dulces", description:"El Dulce de Leche Fauchon 250 g es una joya gourmet elaborada en Francia con leche de primera calidad y azúcar de caña, cocidos lentamente en calderos de cobre para intensificar su sabor caramelizado.", origin: "Francia"},
+            {sku:"80359", brand:"Fauchon", name:"Mermelada 4 frutos rojos 250 Grs", category: "Momentos Dulces", description:"La Mermelada de 4 Frutos Rojos Fauchon 250 g combina la acidez vibrante de la grosella y la frambuesa con la dulzura de la fresa y la intensidad de la guinda, logrando un equilibrio perfecto de sabores.", origin: "Francia"},
+            {sku:"80360", brand:"Fauchon", name:"Mermelada Bitter Naranja 250grs", category: "Momentos Dulces", description:"La Mermelada Bitter Naranja Fauchon 250 g es una creación artesanal que transforma el carácter intenso y cítrico de la naranja en una delicia gourmet de equilibrio amargo–dulce.", origin: "Francia"},
+            {sku:"80361", brand:"Fauchon", name:"Mermelada Berries negras Grosellas 245 Grs", category: "Momentos Dulces", description:"La Mermelada de Berries Negras Grosellas Fauchon 245 g es una creación artesanal francesa que captura la intensidad de esta fruta originaria de Île-de-France, donde el clima templado y húmedo potencia su jugosidad y aroma natural.", origin: "Francia"},
+            {sku:"80362", brand:"Fauchon", name:"Mermelada Bisou bisou 250 Grs", category: "Momentos Dulces", description:"La Mermelada Bisou Bisou Fauchon 250 g es una creación única que combina la dulzura de la fresa y la frambuesa con la frescura de la menta piperita, la suavidad de la hoja de morera y la ligereza aromática del té Bisou Bisou.", origin: "Francia"},
+            {sku:"80363", brand:"Fauchon", name:"Set 5 mini mermeladas 5x28 grs", category: "Momentos Dulces", description:"El Set 5 Mini Mermeladas Fauchon 5x28 g reúne cinco sabores icónicos en un formato elegante y versátil: fresa con pétalos de rosa, frambuesa con grosella roja, albaricoque de Languedoc-Roussillon, naranja amarga de Sevilla y fresa Mara des Bois.", origin: "Francia"},
+            {sku:"80364", brand:"Fauchon", name:"Pasta cebolla caramelizada 105grs", category: "Aderezos y Condimentos", description:"La Pasta de Cebolla Caramelizada Fauchon 105g es una delicatessen artesanal elaborada con cebollas seleccionadas y cocinadas lentamente en pequeños lotes, con azúcar de caña en calderos de cobre.", origin: "Francia"},
+            {sku:"80365", brand:"Fauchon", name:"Rilette de Salmon 80 grs", category: "Gourmet", description:"Rillettes de Salmón Fauchon 80g son una exquisitez artesanal que combina salmón fresco del Atlántico con salmón ahumado en madera de haya, siguiendo un método ancestral de la isla de Groix.", origin: "Francia"},
+            {sku:"80366", brand:"Fauchon", name:"Rillette de cangrejo 80 grs", category: "Gourmet", description:"Rillettes de Cangrejo Fauchon 80g son una especialidad artesanal que combina mariscos del Atlántico Noreste con crema y chalotas, realzados por un toque de pimienta blanca.", origin: "Francia"},
+            {sku:"80367", brand:"Fauchon", name:"Champagne brut 750ml", category: "Bar y Mixología", description:"El Champagne Brut Fauchon 750 ml es la máxima expresión del arte francés en la mesa. De color dorado brillante, revela un delicado aroma floral con marcada mineralidad que aporta frescura y elegancia.", origin: "Francia"},
+            {sku:"80368", brand:"Fauchon", name:"Champagne brut 375 ml", category: "Bar y Mixología", description:"El Champagne Brut Fauchon 375 ml concentra todo el refinamiento francés en un formato ideal para compartir en pareja o en pequeños momentos de celebración.", origin: "Francia"},
+            {sku:"80369", brand:"Fauchon", name:"Champagne Brut 1500 ml", category: "Bar y Mixología", description:"El Champagne Brut Fauchon 1500 ml es la elección perfecta para grandes celebraciones. Con un brillante color dorado y burbujas finas y persistentes, despliega un bouquet floral acompañado de una elegante mineralidad que refleja el estilo único de Fauchon.", origin: "Francia"},
+            {sku:"80370", brand:"Fauchon", name:"Champagne Rose 750ml", category: "Bar y Mixología", description:"El Champagne Rose Fauchon 750 ml es una joya de la enología francesa, reconocida por sus burbujas finas y persistentes que envuelven un delicado bouquet dulce y especiado.", origin: "Francia"},
+            {sku:"80371", brand:"Fauchon", name:"Bolsa L 37x37x37", category: "Regalos", description:"La Bolsa L Fauchon 37x37x37 cm es una pieza icónica que refleja la elegancia parisina de la marca. Fabricado en papel resistente y de alta calidad, presenta un diseño cuadrado con el inconfundible estampado en blanco y negro del logotipo Fauchon.", origin: "Francia"},
+            {sku:"80372", brand:"Fauchon", name:"Bolsa Botella", category: "Regalos", description:"La Bolsa de Botella Fauchon (12,5 x 12,5 x 40 cm) es un emblema de sofisticación y estilo. Elaborada en papel de alta calidad con el clásico diseño en blanco y negro de la Maison Fauchon, está especialmente pensada para contener una botella de vino o champaña de 75 cl.", origin: "Francia"},
+            {sku:"80373", brand:"Fauchon", name:"Pasta de Higos 105 grs", category: "Gourmet", description:"La Pasta de Higos Fauchon 105g está elaborada con higos morados de Provenza, cocinados lentamente en calderos de cobre siguiendo la receta tradicional. Este proceso artesanal resalta su dulzura natural y aporta una textura suave y elegante.", origin: "Francia"},
+            {sku:"80374", brand:"Fauchon", name:"32 Tabletas de chocolate Bitter & Leche 160 grs", category: "Momentos Dulces", description:"Las 32 Tabletas de Chocolate Bitter & Leche Fauchon 160 g ofrecen un irresistible contraste entre la intensidad del chocolate negro 70% cacao ecuatoriano y la suavidad cremosa del chocolate con leche 36% cacao, también de origen ecuatoriano.", origin: "Francia"},
+            {sku:"80019", brand:"Cipriani", name:"Pasta Tagliarelle al huevo 250 grs", category: "Gourmet", description:"Los Tagliarelle de Cipriani representan el pináculo de la excelencia de la pasta, meticulosamente elaborados a la perfección.", origin: "Italia"},
+            {sku:"80020", brand:"Cipriani", name:"Pasta Tagliarelle al huevo con espinaca 250 grs", category: "Gourmet", description:"Cipriani Spinach Tagliatelle representan una fascinante fusión de tradición e innovación. Estas exquisitas \"cintas\" de pasta, delicadamente enriquecidas con espinacas, redefinen la excelencia culinaria.", origin: "Italia"},
+            {sku:"80021", brand:"Cipriani", name:"Pasta Pappardelle al huevo 250grs", category: "Gourmet", description:"Los Pappardelle al huevo de Cipriani encarnan la esencia de la maestría culinaria italiana. Producidas exclusivamente en las instalaciones de Cipriani en Venecia.", origin: "Italia"},
+            {sku:"80022", brand:"Cipriani", name:"Pasta Pappardelle al huevo y espinaca 250 grs", category: "Gourmet", description:"Con una infusión de vibrantes espinacas, estas pappardelle cuentan con un llamativo tono verde que sigue siendo visualmente atractivo incluso después de cocinarlas.", origin: "Italia"},
+            {sku:"80023", brand:"Cipriani", name:"Pasta Tagliolini al huevo 250 grs", category: "Gourmet", description:"Los Cipriani Tagliolini, elaborados en las instalaciones venecianas de Cipriani Food, presentan una rugosidad distintiva al tacto, atribuida a la alta calidad de la sémola utilizada.", origin: "Italia"},
+            {sku:"80024", brand:"Cipriani", name:"Pasta Tagliolini al huevo y espinaca 250 grs", category: "Gourmet", description:"Los Cipriani Spinach Taglioni, elaborados con precisión por Cipriani Food, tienen una rugosidad distintiva al tacto.", origin: "Italia"},
+            {sku:"80025", brand:"Cipriani", name:"Salsa Pomodoro 340 grs", category: "Gourmet", description:"Pomod'oro es un puré de tomate orgánico, cultivado respetando el medio ambiente. La intensidad del sol junto con las características del área, forman el ambiente ideal.", origin: "Italia"},
+            {sku:"80026", brand:"Cipriani", name:"Salsa Sansovina 340 grs", category: "Gourmet", description:"Salsa de tomate cocido con cebolla, zanahoria, albahaca, aceite de oliva virgen extra y sal. Esta salsas sirve para enriquecer, refinar y mejorar el sabor.", origin: "Italia"},
+            {sku:"80027", brand:"Cipriani", name:"Pesto 180gr", category: "Gourmet", description:"Sabroso pesto orgánico, elaborado con 55% de albahaca. Será el complemento perfecto para tus pastas.", origin: "Italia"},
+            {sku:"80138", brand:"Cipriani", name:"Panettone in metal tin 1kg", category: "Momentos Dulces", description:"Contenido en una lata, nuestro Panettone de 1kg celebra la esencia de la artesanía, destacando por la ausencia de fruta confitada.", origin: "Italia"},
+            {sku:"80139", brand:"Cipriani", name:"Base Bellini 180 ml Cipriani", category: "Bar y Mixología", description:"The iconic cocktail invented by Giuseppe Cipriani in 1948 at Harry's Bar in Venice.", origin: "Italia"},
+            {sku:"80217", brand:"Cipriani", name:"Rigatoni 500 Gr Cipriani", category: "Gourmet", description:"Los Rigatoni de Cipriani, piedra angular de la artesanía de la pasta, encarnan la esencia de la herencia culinaria italiana.", origin: "Italia"},
+            {sku:"80218", brand:"Cipriani", name:"Spaghetti 500gr Cipriani", category: "Gourmet", description:"Los espaguetis de Cipriani, una variedad de pasta muy apreciada, encarnan la esencia de la herencia culinaria italiana.", origin: "Italia"},
+            {sku:"80219", brand:"Cipriani", name:"Arroz para Risotto Carnaroli 1 kg Cipriani", category: "Gourmet", description:"Cultivado en Casalbeltrame, un pequeño municipio italiano de 980 habitantes en la provincia de Novara, en Piamonte.", origin: "Italia"},
+            {sku:"80220", brand:"Cipriani", name:"Bellini Base Preparada Cipriani 0,75 Lts", category: "Bar y Mixología", description:"Una bebida dulce y relajada que deleita tanto el paladar como la vista.", origin: "Italia"},
+            {sku:"80221", brand:"Cipriani", name:"Prosecco DO Cipriani 0,75 Lts", category: "Bar y Mixología", description:"Para ampliar su selección de vinos, Cipriani Drinks ha seleccionado el mejor Prosecco de una región con denominación de calidad certificada (DOC).", origin: "Italia"},
+            {sku:"80329", brand:"Cipriani", name:"Bellini Zero 0,75 L", category: "Bar y Mixología", description:"Bellini Zero 0,75 L Cipriani es la versión sin alcohol del icónico cóctel veneciano.", origin: "Italia"},
+            {sku:"80407", brand:"Cipriani", name:"Bellini Cocktail 200 ml Cipriani", category: "Bar y Mixología", description:"Bellini Cocktail 200 ml Cipriani es el clásico cóctel veneciano creado en Harry’s Bar.", origin: "Italia"},
+            {sku:"80291", brand:"Danica", name:"Porta Huevo Element Myrtle Danica", category: "Mesa y Cocina", description:"El Porta Huevo Element Myrtle Danica está elaborado en cerámica gres 100% de alta calidad.", origin: "Francia"},
+            {sku:"80292", brand:"Danica", name:"Porta Huevo Element Calendula Danica", category: "Mesa y Cocina", description:"El Porta Huevo Element Calendula Danica está elaborado en cerámica gres 100% de alta calidad.", origin: "Francia"},
+            {sku:"80293", brand:"Danica", name:"Mantequillera Element Calendula Danica", category: "Mesa y Cocina", description:"Mantequillera Element Calendula Danica: una pieza de cerámica gres 100% que combina diseño y funcionalidad.", origin: "Francia"},
+            {sku:"80294", brand:"Danica", name:"Plato 16.5 cms Element Arbor Danica", category: "Mesa y Cocina", description:"El Plato 16.5 cm Element Arbor Danica está elaborado en cerámica gres y forma parte de la colección Element.", origin: "Francia"},
+            {sku:"80295", brand:"Danica", name:"Plato 16.5 cms Element Myrtle Danica", category: "Mesa y Cocina", description:"El Plato 16.5 cm Element Myrtle Danica, elaborado en cerámica gres, combina diseño funcional y estética natural.", origin: "Francia"},
+            {sku:"80296", brand:"Danica", name:"Bowl 15.8 cms Element Myrtle Danica", category: "Mesa y Cocina", description:"El Bowl 15.8 cm Element Myrtle Danica de cerámica gres combina diseño artesanal y funcionalidad.", origin: "Francia"},
+            {sku:"80297", brand:"Danica", name:"Bowl 15.8 cms Element Arbor Danica", category: "Mesa y Cocina", description:"El Bowl 15.8 cm Element Arbor Danica está elaborado en cerámica gres 100% pintada a mano.", origin: "Francia"},
+            {sku:"80298", brand:"Danica", name:"Bowl 15.8 cms Element Calendula Danica", category: "Mesa y Cocina", description:"El Bowl 15.8 cms Element Calendula Danica, elaborado en cerámica gres de alta calidad, destaca por su diseño pintado a mano.", origin: "Francia"},
+            {sku:"80299", brand:"Danica", name:"Mug Element Myrtle Danica", category: "Té y Café", description:"El Mug Element Myrtle Danica está elaborado en cerámica gres 100%, ofreciendo resistencia y elegancia.", origin: "Francia"},
+            {sku:"80300", brand:"Danica", name:"Mug Element Arbor Danica", category: "Té y Café", description:"El Mug Element Arbor Danica, elaborado en cerámica gres 100%, combina durabilidad y diseño contemporáneo.", origin: "Francia"},
+            {sku:"80301", brand:"Danica", name:"Plato 25.4 cms Element Calendula Danica", category: "Mesa y Cocina", description:"El Plato 25.4 cms Element Calendula Danica de cerámica gres combina diseño artesanal y funcionalidad.", origin: "Francia"},
+            {sku:"80302", brand:"Danica", name:"Plato servir Element calendula Danica", category: "Mesa y Cocina", description:"Plato Servir Element Calendula Danica de cerámica gres 100% es una pieza única.", origin: "Francia"},
+            {sku:"80303", brand:"Danica", name:"Paño cocina wae Jasmine Danica", category: "Mesa y Cocina", description:"El Paño de Cocina wae Jasmine Danica combina practicidad y estilo con un delicado estampado de jazmín.", origin: "Francia"},
+            {sku:"80304", brand:"Danica", name:"Paño cocina wae Blomma Danica", category: "Mesa y Cocina", description:"El Paño de cocina Wae Blomma Danica está confeccionado en 100% algodón con tejido de gofre súper absorbente.", origin: "Francia"},
+            {sku:"80305", brand:"Danica", name:"Bowl ensalada Hanami Danica", category: "Mesa y Cocina", description:"El Bowl Ensalada Hanami Danica celebra la delicadeza de la tradición japonesa de “contemplar las flores”.", origin: "Francia"},
+            {sku:"80306", brand:"Danica", name:"Plato fondo Hanami Danica", category: "Mesa y Cocina", description:"El plato fondo Hanami de Danica, fabricado en 100% cerámica gres, celebra la delicadeza de las flores efímeras.", origin: "Francia"},
+            {sku:"80307", brand:"Danica", name:"Plato pan Hanami Danica", category: "Mesa y Cocina", description:"El Plato plan Hanami Danica, elaborado en 100% cerámica gres, aporta elegancia y funcionalidad a tu mesa.", origin: "Francia"},
+            {sku:"80308", brand:"Danica", name:"Bowl Postre Hanami Danica", category: "Mesa y Cocina", description:"El Bowl Postre Hanami Danica está elaborado en 100% cerámica gres y combina resistencia con un diseño elegante.", origin: "Francia"},
+            {sku:"80309", brand:"Danica", name:"Bowl chico Hanami Danica", category: "Aperitivo", description:"El Bowl Chico Hanami Danica, hecho en 100% cerámica gres, refleja la sutileza y armonía de la colección Hanami.", origin: "Francia"},
+            {sku:"80310", brand:"Danica", name:"Plato servir 30 cms Hanami Danica", category: "Mesa y Cocina", description:"El Plato Servir 30 cm Hanami Danica, fabricado en 100 % cerámica gres, aporta elegancia y funcionalidad.", origin: "Francia"},
+            {sku:"80311", brand:"Danica", name:"Plato servir 37 cms Hanami Danica", category: "Mesa y Cocina", description:"El Plato Servir 37 cm Hanami Danica, elaborado en 100% cerámica gres, combina funcionalidad y elegancia.", origin: "Francia"},
+            {sku:"80312", brand:"Danica", name:"Set 4 vasos Hanami Danica", category: "Bar y Mixología", description:"El Set de 4 Vasos Hanami Danica, elaborado en 100% cerámica gres, aporta elegancia y frescura a tu mesa.", origin: "Francia"},
+            {sku:"80313", brand:"Danica", name:"Set 2 piezas Servir madera Wavy Danica", category: "Mesa y Cocina", description:"Aporta calidez y elegancia natural a tu mesa con el set de 2 piezas para servir Wavy Danica.", origin: "Francia"},
+            {sku:"80314", brand:"Danica", name:"Individual Lattice Gris Danica", category: "Mesa y Cocina", description:"Eleva la presentación de tu mesa con el Individual Lattice Gris Danica, elaborado en 100% algodón tejido.", origin: "Francia"},
+            {sku:"80315", brand:"Danica", name:"Individual Lattice Burdeo Danica", category: "Mesa y Cocina", description:"El Individual Lattice Burdeo Danica, confeccionado en 100% algodón tejido, combina elegancia clásica y funcionalidad.", origin: "Francia"},
+            {sku:"80316", brand:"Danica", name:"Individual Lattice Verde Danica", category: "Mesa y Cocina", description:"El Individual Lattice Verde Danica, confeccionado en 100% algodón tejido, combina elegancia y funcionalidad.", origin: "Francia"},
+            {sku:"80317", brand:"Danica", name:"Set 4 tazas expresso Maison Danica", category: "Té y Café", description:"Este elegante set de cuatro tazas espresso Maison Danica, elaborado en 100% cerámica gres, aporta un encanto atemporal.", origin: "Francia"},
+            {sku:"80318", brand:"Danica", name:"Set 4 tazas expresso Aquarius Danica", category: "Té y Café", description:"Set 4 Tazas Espresso Aquarius Danica aporta equilibrio y fluidez a tu mesa con sus líneas armoniosas y tonos suaves.", origin: "Francia"},
+            {sku:"80319", brand:"Danica", name:"Paño esponja compostable pavo real Danica", category: "Mesa y Cocina", description:"El Paño Esponja Compostable Pavo Real Danica está fabricado con 70% celulosa y 30% algodón.", origin: "Francia"},
+            {sku:"80320", brand:"Danica", name:"Paño esponja compostable gallina Danica", category: "Mesa y Cocina", description:"Paño Esponja Compostable Gallina Danica combina sostenibilidad y funcionalidad en tu cocina.", origin: "Francia"},
+            {sku:"80321", brand:"Danica", name:"Paño esponja compostable sardinas Danica", category: "Mesa y Cocina", description:"Paño Esponja Compostable Sardinas Danica combina estilo marinero y sostenibilidad para tu cocina.", origin: "Francia"},
+            {sku:"80322", brand:"Danica", name:"Paño esponja compostable algas Danica", category: "Mesa y Cocina", description:"Paño Esponja Compostable Algas Danica une diseño natural y funcionalidad sostenible para tu cocina.", origin: "Francia"},
+            {sku:"80323", brand:"Danica", name:"Paño esponja compostable langsosta Danica", category: "Mesa y Cocina", description:"Paño Esponja Compostable Langosta Danica combina estilo, practicidad y compromiso ambiental para tu cocina.", origin: "Francia"},
+            {sku:"80324", brand:"Danica", name:"Paño esponja compostable paris Danica", category: "Mesa y Cocina", description:"Paño Esponja Compostable París Danica une estilo, funcionalidad y sostenibilidad para tu cocina.", origin: "Francia"},
+            {sku:"80325", brand:"Danica", name:"Paño esponja compostable cafe Danica", category: "Mesa y Cocina", description:"Paño Esponja Compostable Café Danica combina estilo, funcionalidad y sostenibilidad en tu cocina.", origin: "Francia"},
+            {sku:"80326", brand:"Danica", name:"Paño esponja compostable parrilla Danica", category: "Mesa y Cocina", description:"El Paño esponja compostable parrilla Danica fabricado con 70 % de celulosa y 30 % de algodón, es una alternativa ecológica.", origin: "Francia"},
+            {sku:"80430", brand:"Danica", name:"Esponja compostable Danica", category: "Mesa y Cocina", description:"Esponja compostable Danica es una opción elegante y ecológica para complementar tus compras o regalos.", origin: "Francia"},
+            {sku:"80332", brand:"Danica", name:"Plato 16.5 cms Element Calendula Danica", category: "Mesa y Cocina", description:"El Plato 16.5 cms Element Calendula Danica es un elegante plato para aperitivos que captura la esencia del agua.", origin: "Francia"},
+            {sku:"80333", brand:"Danica", name:"Set 4 Cucharas Element Danica", category: "Mesa y Cocina", description:"El Set 4 Cucharas Element Danica es una pieza esencial para quienes buscan estilo y funcionalidad en su mesa.", origin: "Francia"}
+        ];
+
+        const CATEGORIES = ["Aperitivo", "Aderezos y Condimentos", "Bar y Mixología", "Gourmet", "Mesa y Cocina", "Momentos Dulces", "Regalos", "Té y Café", "Otros"];
+
+        // --- STATE MANAGEMENT ---
+        let mainView = 'catalog'; 
+        let stockMode = 'count'; 
+        let currentCategory = 'Todos';
+        let selectedDateKey = "";
+        let searchTerm = '';
+        
+        let dataCount = {};
+        let dataReception = {};
+        let dataSuggestion = {};
+        let currentDocNumber = "";
+        
+        let swipeStartX = 0;
+        let activeDetailSku = null;
+        let shareTypeTemp = '';
+
+        // --- INIT ---
+        window.addEventListener('DOMContentLoaded', () => {
+            initDate();
+            loadAllData();
+            switchMainView('catalog'); 
+            setupSearch();
+            setupOverlaySwipe();
+            window.addEventListener('scroll', handleScroll);
+        });
+
+        function initDate() {
+            const dateInput = document.getElementById('dateInput');
+            const today = new Date().toISOString().split('T')[0];
+            dateInput.value = today;
+            selectedDateKey = today;
+            updateDateDisplay(today);
+            dateInput.addEventListener('change', (e) => {
+                selectedDateKey = e.target.value;
+                updateDateDisplay(selectedDateKey);
+                loadAllData();
+                renderProducts();
+            });
+        }
+
+        function updateDateDisplay(dateStr) {
+            const parts = dateStr.split('-');
+            document.querySelector('.header-date').innerHTML = `${parts[2]}/${parts[1]}`;
+        }
+        function openDate() { document.getElementById('dateInput').showPicker(); }
+
+        // --- DATA MANAGER ---
+        function loadAllData() {
+            try {
+                dataCount = JSON.parse(localStorage.getItem(`inv_count_${selectedDateKey}`)) || {};
+                dataReception = JSON.parse(localStorage.getItem(`inv_recep_${selectedDateKey}`)) || {};
+                dataSuggestion = JSON.parse(localStorage.getItem(`inv_sugg_${selectedDateKey}`)) || {};
+                const savedDoc = localStorage.getItem(`inv_recep_doc_${selectedDateKey}`);
+                if(savedDoc) currentDocNumber = savedDoc;
+            } catch (e) {
+                dataCount = {}; dataReception = {}; dataSuggestion = {};
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem(`inv_count_${selectedDateKey}`, JSON.stringify(dataCount));
+            localStorage.setItem(`inv_recep_${selectedDateKey}`, JSON.stringify(dataReception));
+            localStorage.setItem(`inv_sugg_${selectedDateKey}`, JSON.stringify(dataSuggestion));
+            if(stockMode === 'reception') localStorage.setItem(`inv_recep_doc_${selectedDateKey}`, currentDocNumber);
+            document.getElementById('lastSavedIndicator').textContent = 'Guardado ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+        }
+
+        // --- NAVIGATION ---
+        function switchMainView(view) {
+            mainView = view;
+            
+            document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
+            document.getElementById(`nav-${view}`).classList.add('active');
+            
+            const prodView = document.getElementById('view-products');
+            const histView = document.getElementById('view-history');
+            
+            if (view === 'history') {
+                prodView.style.display = 'none';
+                histView.style.display = 'block';
+                renderHistory();
+            } else {
+                prodView.style.display = 'block';
+                histView.style.display = 'none';
+            }
+            
+            const toolbar = document.getElementById('toolbarMenu');
+            toolbar.innerHTML = ''; 
+
+            if (view === 'catalog') {
+                renderCategories(toolbar);
+            } else if (view === 'stock') {
+                renderStockTools(toolbar);
+            } else if (view === 'history') {
+                renderHistory();
+            }
+            
+            renderProducts();
+            window.scrollTo(0,0);
+        }
+
+        function renderCategories(container) {
+            const cats = ['Todos', ...CATEGORIES];
+            container.innerHTML = cats.map(cat => `
+                <div class="menu-chip ${currentCategory === cat ? 'active' : ''}" 
+                     onclick="selectCategory('${cat}')">${cat}</div>
+            `).join('');
+        }
+
+        function selectCategory(cat) {
+            currentCategory = cat;
+            switchMainView('catalog');
+        }
+
+        function renderStockTools(container) {
+            const modes = [
+                {id: 'date', label: 'Fecha', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />'},
+                {id: 'count', label: 'Conteo', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />'},
+                {id: 'reception', label: 'Recepción', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />'},
+                {id: 'suggestion', label: 'Sugerido', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />'},
+                {id: 'import', label: 'Importar', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />'}
+            ];
+
+            container.innerHTML = modes.map(m => {
+                let activeClass = '';
+                if(stockMode === m.id) {
+                    if(m.id === 'count') activeClass = 'count-active';
+                    else if(m.id === 'reception') activeClass = 'recep-active';
+                    else if(m.id === 'suggestion') activeClass = 'sugg-active';
+                }
+
+                let onclick = `setStockMode('${m.id}')`;
+                if(m.id === 'date') onclick = `openDate()`;
+                if(m.id === 'import') onclick = `document.getElementById('fileImport').click()`;
+
+                return `
+                <div class="menu-chip ${activeClass}" onclick="${onclick}">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">${m.icon}</svg>
+                    ${m.label}
+                </div>`;
+            }).join('');
+            
+            // Add Camera Button only if Reception
+            if (stockMode === 'reception') {
+                container.innerHTML += `
+                <div class="menu-chip" onclick="triggerCamera()">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    Escanear Guía
+                </div>`;
+            }
+        }
+
+        function setStockMode(mode) {
+            stockMode = mode;
+            switchMainView('stock');
+        }
+
+        function triggerCamera() { document.getElementById('scanInput').click(); }
+
+async function handleScan(input) {
+    if (!input.files || !input.files[0]) return;
+    
+    const file = input.files[0];
+    
+    if (file.size > 10 * 1024 * 1024) {
+        showToast("Imagen muy grande. Máximo 10MB.");
+        return;
+    }
+    
+    showToast("Procesando guía con Google Vision AI...");
+    
+    try {
+        const reader = new FileReader();
+        const base64 = await new Promise((resolve, reject) => {
+            reader.onload = (e) => resolve(e.target.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+        
+        const response = await fetch('/.netlify/functions/process-guia', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: base64 })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error procesando imagen');
+        }
+        
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'No se pudo procesar la guía');
+        }
+        
+        procesarGuiaOCR(data);
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showToast("Error: " + error.message);
+    }
+}
+        // --- RENDER PRODUCTS ---
+        function renderProducts() {
+            // CORRECCIÓN: ID Correcto
+            const container = document.getElementById('productsContainer');
+            const ctaContainer = document.getElementById('ctaContainer');
+            const docContainer = document.getElementById('docInputContainer');
+            
+            if(!container) return;
+
+            ctaContainer.innerHTML = ''; 
+            docContainer.innerHTML = '';
+
+            let filtered = rawProducts.filter(p => {
+                // Search filter (Name, SKU, Brand, Origin)
+                if (searchTerm) {
+                    const term = searchTerm;
+                    const matchesName = p.name.toLowerCase().includes(term);
+                    const matchesSku = p.sku.includes(term);
+                    const matchesBrand = p.brand.toLowerCase().includes(term);
+                    const matchesOrigin = p.origin ? p.origin.toLowerCase().includes(term) : false;
+                    
+                    if (!matchesName && !matchesSku && !matchesBrand && !matchesOrigin) return false;
+                }
+                
+                if (mainView === 'catalog') {
+                    if (currentCategory !== 'Todos') {
+                        if (currentCategory === 'Otros') return !p.category;
+                        return p.category === currentCategory;
+                    }
+                }
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                container.innerHTML = '<div class="empty-state">No se encontraron productos</div>';
+                return;
+            }
+
+            if (mainView === 'stock' && stockMode === 'reception') {
+                docContainer.innerHTML = `
+                <div class="doc-input-container">
+                    <span style="font-weight:600; font-size:13px; color:#1e293b;">N° Guía:</span>
+                    <input type="text" id="docNumberInput" class="doc-input" placeholder="Ej: 123456" value="${currentDocNumber}" onchange="updateDocNumber(this.value)">
+                </div>`;
+            }
+
+            if (mainView === 'stock') {
+                let btnText = "";
+                let modeLabel = "";
+                if (stockMode === 'count') { btnText = "Finalizar Conteo"; modeLabel="Conteo"; }
+                if (stockMode === 'reception') { btnText = "Finalizar Recepción"; modeLabel="Recepción"; }
+                if (stockMode === 'suggestion') { btnText = "Finalizar Sugerido"; modeLabel="Sugerido"; }
+                
+                if(btnText) {
+                    ctaContainer.innerHTML = `
+                        <button class="btn-cta" onclick="openShareModal('${modeLabel}')">
+                            ${btnText}
+                        </button>
+                    `;
+                }
+            }
+
+            container.innerHTML = filtered.map(p => {
+                const qtyCount = dataCount[p.sku] || 0;
+                const qtyRecep = dataReception[p.sku] || 0;
+                const qtySugg = dataSuggestion[p.sku] || 0;
+
+                let controls = '';
+                let borderClass = '';
+                let displayVal = 0;
+
+                if (mainView === 'stock') {
+                    let currentModeClass = '';
+                    if (stockMode === 'count') {
+                        displayVal = qtyCount;
+                        currentModeClass = 'count-mode';
+                        if(qtyCount > 0) borderClass = 'counted';
+                    } else if (stockMode === 'reception') {
+                        displayVal = qtyRecep;
+                        currentModeClass = 'reception-mode';
+                        if(qtyRecep > 0) borderClass = 'reception-counted';
+                    } else if (stockMode === 'suggestion') {
+                        displayVal = qtySugg;
+                        currentModeClass = 'suggestion-mode';
+                        if(qtySugg > 0) borderClass = 'suggestion-counted';
+                    }
+
+                    controls = `
+                        <div class="stock-control ${currentModeClass}" onclick="event.stopPropagation()">
+                            <button class="btn-stock" onclick="modifyStock('${p.sku}', -1)">-</button>
+                            <input class="stock-input" value="${displayVal}" readonly>
+                            <button class="btn-stock" onclick="modifyStock('${p.sku}', 1)">+</button>
+                        </div>
+                    `;
+                } else {
+                    controls = `<div class="catalog-display">${qtyCount} un.</div>`;
+                }
+
+                return `
+                    <div class="product-card ${borderClass}" onclick="openDetail('${p.sku}')">
+                        <div class="product-info">
+                            <h4>${p.name}</h4>
+                            <div class="product-sku">SKU: ${p.sku}</div>
+                        </div>
+                        ${controls}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // --- LOGIC ---
+        function updateDocNumber(val) {
+            currentDocNumber = val;
+            saveData();
+        }
+
+        function modifyStock(sku, delta) {
+            let db;
+            if (stockMode === 'count') db = dataCount;
+            else if (stockMode === 'reception') db = dataReception;
+            else if (stockMode === 'suggestion') db = dataSuggestion;
+            
+            const current = db[sku] || 0;
+            const newVal = Math.max(0, current + delta);
+            db[sku] = newVal;
+            
+            saveData();
+            renderProducts(); 
+        }
+
+        // --- SHARE MODAL & EXPORT ---
+        function openShareModal(type) {
+            shareTypeTemp = type;
+            document.getElementById('shareModalTitle').textContent = `Compartir ${type}`;
+            document.getElementById('shareModal').classList.add('active');
+        }
+        
+        function closeShareModal() {
+            document.getElementById('shareModal').classList.remove('active');
+        }
+
+        function executeShare(method) {
+            const type = shareTypeTemp;
+            closeShareModal();
+            
+            let db;
+            let docInfo = "";
+            if (type === 'Conteo') db = dataCount;
+            else if (type === 'Recepción') { 
+                db = dataReception; 
+                if(currentDocNumber) docInfo = `\n*Documento:* ${currentDocNumber}`;
+            }
+            else if (type === 'Sugerido') db = dataSuggestion;
+
+            let text = `*Reporte ${type} - ${selectedDateKey}*${docInfo}\n\n`;
+            let bodyEmail = `Reporte ${type} - ${selectedDateKey} ${docInfo}%0D%0A%0D%0A`;
+            
+            let hasItems = false;
+            
+            rawProducts.forEach(p => {
+                const val = db[p.sku] || 0;
+                if(val > 0) {
+                    text += `- ${p.name}: ${val}\n`;
+                    bodyEmail += `- ${p.name}: ${val}%0D%0A`;
+                    hasItems = true;
+                }
+            });
+
+            if (!hasItems) { showToast("No hay items para enviar"); return; }
+            
+            // Save History Logic
+            const hist = JSON.parse(localStorage.getItem('appHistory') || '[]');
+            let label = type;
+            if (type === 'Recepción' && currentDocNumber) label += ` #${currentDocNumber}`;
+            
+            hist.push({ 
+                date: selectedDateKey, 
+                type: label, 
+                timestamp: new Date().toISOString(),
+                docNum: currentDocNumber 
+            });
+            localStorage.setItem('appHistory', JSON.stringify(hist));
+
+            if (method === 'whatsapp') {
+                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
+            } else if (method === 'email') {
+                window.open(`mailto:?subject=Reporte ${type} ${selectedDateKey}&body=${bodyEmail}`, '_blank');
+            }
+        }
+        
+        function renderHistory() {
+            const hist = JSON.parse(localStorage.getItem('appHistory') || '[]');
+            const container = document.getElementById('historyContent');
+            if(hist.length === 0) { container.innerHTML = '<div class="empty-state">Sin registros aún</div>'; return; }
+            container.innerHTML = hist.reverse().map(h => `
+                <div class="history-item">
+                    <div>
+                        <div class="header-date" style="color:#333; cursor:default; background:none; padding:0;">${h.type}</div>
+                        <div style="font-size:12px; color:#888;">${new Date(h.timestamp).toLocaleString()}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // --- OVERLAY ---
+        function openDetail(sku) {
+            const p = rawProducts.find(x => x.sku === sku);
+            if(!p) return;
+            activeDetailSku = sku;
+            
+            document.getElementById('dBrand').innerText = p.brand;
+            document.getElementById('dName').innerText = p.name;
+            document.getElementById('dSku').innerText = p.sku;
+            document.getElementById('dDesc').innerText = p.description || 'Sin descripción disponible.';
+            
+            const imgEl = document.getElementById('dImg');
+            const ph = document.getElementById('dPlace');
+            
+            if(p.image) {
+                imgEl.src = p.image; imgEl.style.display = 'block'; ph.style.display = 'none';
+            } else {
+                imgEl.style.display = 'none'; ph.style.display = 'block';
+            }
+            
+            const originEl = document.getElementById('dOrigin');
+            if (p.origin) {
+                originEl.textContent = p.origin;
+                originEl.style.display = 'block';
+            } else {
+                originEl.style.display = 'none';
+            }
+
+            document.getElementById('productOverlay').classList.add('active');
+        }
+
+        function closeOverlay() {
+            document.getElementById('productOverlay').classList.remove('active');
+        }
+
+        function setupOverlaySwipe() {
+            const card = document.getElementById('detailCard');
+            card.addEventListener('touchstart', e => { swipeStartX = e.changedTouches[0].screenX; }, {passive: true});
+            card.addEventListener('touchend', e => {
+                const endX = e.changedTouches[0].screenX;
+                if (swipeStartX - endX > 50) navigateDetail(1); 
+                if (endX - swipeStartX > 50) navigateDetail(-1); 
+            }, {passive: true});
+        }
+
+        function navigateDetail(dir) {
+            const idx = rawProducts.findIndex(p => p.sku === activeDetailSku);
+            if(idx === -1) return;
+            let nextIdx = idx + dir;
+            if(nextIdx >= rawProducts.length) nextIdx = 0;
+            if(nextIdx < 0) nextIdx = rawProducts.length - 1;
+            openDetail(rawProducts[nextIdx].sku);
+        }
+
+        // --- UTILS ---
+        function handleSearch(el) {
+            searchTerm = el.value.toLowerCase();
+            document.querySelector('.clear-search').style.display = searchTerm ? 'block' : 'none';
+            renderProducts();
+        }
+        function clearSearch() {
+            searchTerm = '';
+            document.getElementById('searchInput').value = '';
+            document.querySelector('.clear-search').style.display = 'none';
+            renderProducts();
+        }
+        function setupSearch() {
+             document.getElementById('searchInput').addEventListener('keyup', (e) => handleSearch(e.target));
+        }
+        function handleFileImport() { showToast("Importación no configurada en demo"); }
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg; t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2000);
+        }
+        function resetView() { localStorage.clear(); location.reload(); }
+        
+        // Scroll Button Logic
+        function handleScroll() {
+            const btn = document.getElementById('floatingSaveBtn');
+            const icon = document.getElementById('floatingIcon');
+            if(window.scrollY > 150) btn.classList.add('visible');
+            else btn.classList.remove('visible');
+            
+            const isBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 100);
+            if (isBottom) {
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M5 10l7-7m0 0l7 7m-7-7v18" />';
+                btn.onclick = () => window.scrollTo({top:0, behavior:'smooth'});
+            } else {
+                icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" d="M19 14l-7 7m0 0l-7-7m7 7V3" />';
+                btn.onclick = () => window.scrollTo({top:document.body.scrollHeight, behavior:'smooth'});
+            }
+        }
+// === FUNCIONES OCR ===
+function procesarGuiaOCR(data) {
+    if (data.numeroGuia) {
+        currentDocNumber = data.numeroGuia;
+        const docInput = document.getElementById('docNumberInput');
+        if (docInput) docInput.value = data.numeroGuia;
+    }
+    
+    if (data.productos && data.productos.length > 0) {
+        let productosImportados = 0;
+        let productosNoEncontrados = [];
+        
+        data.productos.forEach(prod => {
+            const productoExiste = rawProducts.find(p => p.sku === prod.codigo);
+            
+            if (productoExiste) {
+                dataReception[prod.codigo] = prod.cantidad;
+                productosImportados++;
+            } else {
+                productosNoEncontrados.push(prod.codigo);
+            }
+        });
+        
+        saveData();
+        renderProducts();
+        mostrarResumenGuia(data, productosImportados, productosNoEncontrados);
+        
+    } else {
+        showToast("⚠️ No se detectaron productos en la guía");
+    }
+}
+
+function mostrarResumenGuia(data, importados, noEncontrados) {
+    const modal = document.getElementById('shareModal');
+    const modalContent = modal.querySelector('.modal-content');
+    
+    const totalUnidades = data.productos.reduce((sum, p) => sum + p.cantidad, 0);
+    
+    let html = `
+        <h3 class="modal-title">Guía Procesada ✅</h3>
+        
+        <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border: 2px solid #f87171; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+            <div style="font-size: 12px; color: #7f1d1d; font-weight: 600; margin-bottom: 3px;">Nº GUÍA</div>
+            <div style="font-size: 24px; font-weight: 700; color: #991b1b; letter-spacing: 1px;">${data.numeroGuia || 'N/A'}</div>
+        </div>
+        
+        <div style="background: #eff6ff; border-radius: 10px; padding: 15px; margin-bottom: 15px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #1e40af; font-weight: 600;">Productos importados:</span>
+                <span style="color: #059669; font-weight: 700; font-size: 18px;">✓ ${importados}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #1e40af; font-weight: 600;">Total unidades:</span>
+                <span style="color: #1e40af; font-weight: 700; font-size: 18px;">${totalUnidades}</span>
+            </div>
+    `;
+    
+    if (noEncontrados.length > 0) {
+        html += `
+            <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid #bfdbfe;">
+                <span style="color: #dc2626; font-weight: 600;">SKUs no encontrados:</span>
+                <span style="color: #dc2626; font-weight: 700; font-size: 18px;">⚠️ ${noEncontrados.length}</span>
+            </div>
+        `;
+    }
+    
+    html += '</div><div style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;">';
+    
+    data.productos.forEach(prod => {
+        const existe = rawProducts.find(p => p.sku === prod.codigo);
+        const borderColor = existe ? '#10b981' : '#ef4444';
+        const bgColor = existe ? '#f0fdf4' : '#fee2e2';
+        
+        html += `
+            <div style="background: ${bgColor}; border-left: 3px solid ${borderColor}; border-radius: 6px; padding: 10px; margin-bottom: 8px; font-size: 13px;">
+                <div style="font-weight: 600; color: #1e293b; margin-bottom: 3px;">${prod.descripcion}</div>
+                <div style="display: flex; justify-content: space-between; color: #64748b;">
+                    <span>SKU: ${prod.codigo}</span>
+                    <span style="font-weight: 700;">Cant: ${prod.cantidad}</span>
+                </div>
+            </div>
+        `;
+    });
+    
+    html += `
+        </div>
+        <button class="btn-cta" onclick="closeShareModal()" style="width: 100%; margin-top: 10px;">
+            Continuar con Recepción
+        </button>
+    `;
+    
+    modalContent.innerHTML = html;
+    modal.classList.add('active');
+}
+    </script>
+</body>
+</html>
