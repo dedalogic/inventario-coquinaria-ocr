@@ -31,7 +31,6 @@ exports.handler = async (event) => {
       };
     }
 
-    // Verificar que las credenciales están configuradas
     if (!process.env.GOOGLE_CREDENTIALS) {
       return {
         statusCode: 500,
@@ -43,14 +42,11 @@ exports.handler = async (event) => {
       };
     }
 
-    // Configurar credenciales desde variable de entorno
     const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
     const client = new ImageAnnotatorClient({ credentials });
 
-    // Extraer base64 (remover data:image/...;base64,)
     const base64Image = image.split(',')[1] || image;
 
-    // Llamar a Google Vision API
     const [result] = await client.textDetection({
       image: { content: base64Image }
     });
@@ -68,11 +64,9 @@ exports.handler = async (event) => {
       };
     }
 
-    // El primer elemento contiene todo el texto detectado
     const fullText = detections[0].description;
-    console.log('Texto detectado:', fullText);
+    console.log('Texto completo detectado:', fullText);
 
-    // Procesar el texto para extraer información
     const resultado = procesarTextoGuia(fullText);
 
     return {
@@ -98,20 +92,17 @@ exports.handler = async (event) => {
   }
 };
 
-// Función para procesar el texto y extraer información
 function procesarTextoGuia(texto) {
   const lineas = texto.split('\n').map(l => l.trim()).filter(l => l);
   
   let numeroGuia = '';
   let productos = [];
+  let fechaEmision = '';
 
-  // Buscar número de guía en el formato de Kitchen Center
-  // Patrón: N° seguido de dígitos (ejemplo: N° 0012360788)
+  // ===== DETECTAR NÚMERO DE GUÍA =====
   const patronesGuia = [
-    /N[°º\s]*(\d{10})/i,           // N° 0012360788
-    /N[°º\s]*(\d+)/i,               // N° seguido de números
-    /GUIA.*?(\d{10})/i,             // GUÍA DE DESPACHO ... números
-    /DESPACHO.*?(\d{8,})/i,         // DESPACHO ... números largos
+    /N[°º\s]*(\d{10})/i,
+    /GUIA.*?(\d{10})/i,
   ];
 
   for (const patron of patronesGuia) {
@@ -122,100 +113,113 @@ function procesarTextoGuia(texto) {
     }
   }
 
-  // Si no se encontró, intentar extraer de la primera línea con números largos
-  if (!numeroGuia) {
-    const matchNumLargo = texto.match(/(\d{8,})/);
-    if (matchNumLargo) {
-      numeroGuia = matchNumLargo[1];
-    } else {
-      numeroGuia = 'GD-' + Math.floor(Math.random() * 100000);
+  // ===== DETECTAR FECHA DE EMISIÓN =====
+  const fechaMatch = texto.match(/FECHA\s+EMISI[OÓ]N\s*[:\s]*(\d{2}\/\d{2}\/\d{4})/i);
+  if (fechaMatch) {
+    fechaEmision = fechaMatch[1];
+  }
+
+  console.log('Número de guía:', numeroGuia);
+  console.log('Fecha emisión:', fechaEmision);
+
+  // ===== DETECTAR PRODUCTOS =====
+  
+  // MÉTODO 1: Buscar la tabla de productos específicamente
+  // Primero, encontrar dónde empieza y termina la tabla
+  let enTabla = false;
+  let lineaInicio = -1;
+  let lineaFin = lineas.length;
+
+  for (let i = 0; i < lineas.length; i++) {
+    const linea = lineas[i];
+    
+    // Detectar inicio de tabla (encabezado con CÓDIGO, DESCRIPCIÓN, CANTIDAD)
+    if (linea.match(/C[OÓ]DIGO.*DESCRIPCI[OÓ]N.*CANTIDAD/i)) {
+      enTabla = true;
+      lineaInicio = i + 1;
+      console.log('Inicio de tabla detectado en línea:', i);
+      continue;
+    }
+    
+    // Detectar fin de tabla (Total Unidades, Patente, etc)
+    if (enTabla && linea.match(/Total\s+Unidades|Patente|Nro\s+Contenedor|Puerto/i)) {
+      lineaFin = i;
+      console.log('Fin de tabla detectado en línea:', i);
+      break;
     }
   }
 
-  console.log('Número de guía detectado:', numeroGuia);
-  console.log('Texto completo a analizar:', texto);
-
-  // MÉTODO 1: Buscar productos en formato tabular (Kitchen Center)
-  // Formato: CÓDIGO | DESCRIPCIÓN | CANTIDAD | PUNITARIO | TOTAL
-  // Ejemplo: 80991 | Set 3 cuchillos para quesos Coquinaria | 4 | 16.798 | 67.193
-  
-  // Buscar bloques que contengan código de 5 dígitos
-  const patronTabular = /(\d{5})\s+([^\d]+?)\s+(\d+)\s+[\d.,]+\s+[\d.,]+/gi;
-  let match;
-  
-  while ((match = patronTabular.exec(texto)) !== null) {
-    const sku = match[1];
-    let descripcion = match[2].trim();
-    const cantidad = parseInt(match[3]);
-
-    // Limpiar descripción (remover palabras comunes de encabezados)
-    descripcion = descripcion
-      .replace(/DESCRIPCI[OÓ]N/gi, '')
-      .replace(/Set\s+/gi, 'Set ')
-      .trim();
-
-    if (sku && cantidad > 0 && descripcion) {
-      productos.push({
-        codigo: sku,
-        descripcion: descripcion.substring(0, 80),
-        cantidad: cantidad
-      });
-    }
-  }
-
-  console.log('Productos encontrados (método tabular):', productos.length);
-
-  // MÉTODO 2: Si no se encontró nada, buscar línea por línea
-  if (productos.length === 0) {
-    for (let i = 0; i < lineas.length; i++) {
+  // Si encontramos la tabla, procesar solo esas líneas
+  if (lineaInicio > 0) {
+    console.log('Procesando líneas de tabla desde', lineaInicio, 'hasta', lineaFin);
+    
+    for (let i = lineaInicio; i < lineaFin; i++) {
       const linea = lineas[i];
       
-      // Buscar SKU de 5 dígitos al inicio de la línea
-      const skuMatch = linea.match(/^(\d{5})\s+(.+)/);
+      // Patrón mejorado para detectar productos en la tabla
+      // Formato: CÓDIGO (5 dígitos) + DESCRIPCIÓN + CANTIDAD + números decimales
+      const match = linea.match(/^(\d{5})\s+(.+?)\s+(\d+)\s+[\d.,]+\s+[\d.,]+$/);
       
-      if (skuMatch) {
-        const sku = skuMatch[1];
-        const restoDeLínea = skuMatch[2];
+      if (match) {
+        const codigo = match[1];
+        let descripcion = match[2].trim();
+        const cantidad = parseInt(match[3]);
         
-        // Extraer descripción y cantidad
-        // Buscar números al final que podrían ser cantidad, punitario, total
-        const numerosMatch = restoDeLínea.match(/^(.+?)\s+(\d+)\s+[\d.,]+/);
+        // Limpiar descripción de palabras clave que no son parte del nombre
+        descripcion = descripcion
+          .replace(/^(Set|Juego|Kit)\s*/i, '') // Remover prefijos comunes al inicio
+          .trim();
         
-        if (numerosMatch) {
-          const descripcion = numerosMatch[1].trim();
-          const cantidad = parseInt(numerosMatch[2]);
-          
-          if (cantidad > 0 && descripcion) {
-            productos.push({
-              codigo: sku,
-              descripcion: descripcion.substring(0, 80),
-              cantidad: cantidad
-            });
-          }
+        if (cantidad > 0 && cantidad < 10000) { // Validar cantidad razonable
+          productos.push({
+            codigo: codigo,
+            descripcion: descripcion,
+            cantidad: cantidad
+          });
+          console.log('Producto detectado:', { codigo, descripcion, cantidad });
         }
       }
     }
   }
 
-  console.log('Productos encontrados (método línea por línea):', productos.length);
-
-  // MÉTODO 3: Buscar patrones específicos conocidos
+  // MÉTODO 2: Si no se encontraron productos en la tabla, buscar por patrón más flexible
   if (productos.length === 0) {
-    // Patrón: 5 dígitos + texto + número solo
-    const patronSimple = /(\d{5})\s+(.+?)\s+(\d+)\s*$/gm;
-    let matchSimple;
+    console.log('No se encontraron productos en tabla, buscando con patrón flexible...');
     
-    while ((matchSimple = patronSimple.exec(texto)) !== null) {
-      const sku = matchSimple[1];
-      const descripcion = matchSimple[2].trim();
-      const cantidad = parseInt(matchSimple[3]);
-
-      if (sku && cantidad > 0 && cantidad < 1000) { // Cantidad razonable
-        productos.push({
-          codigo: sku,
-          descripcion: descripcion.substring(0, 80),
-          cantidad: cantidad
-        });
+    // Buscar líneas que empiecen con 5 dígitos
+    for (let i = 0; i < lineas.length; i++) {
+      const linea = lineas[i];
+      
+      // Saltar líneas que claramente no son productos
+      if (linea.match(/ORDEN|NRO|Carga|FECHA|EMISI|RUT|DIRECCI|COMUNA|Ciudad|Tel/i)) {
+        continue;
+      }
+      
+      // Buscar patrón: 5 dígitos + texto + número
+      const match = linea.match(/^(\d{5})\s+(.+)/);
+      
+      if (match) {
+        const codigo = match[1];
+        const resto = match[2];
+        
+        // Intentar extraer cantidad (número entre 1 y 4 dígitos antes de decimales)
+        const cantMatch = resto.match(/\s+(\d{1,4})\s+[\d.,]+/);
+        
+        if (cantMatch) {
+          const cantidad = parseInt(cantMatch[1]);
+          
+          // Extraer descripción (todo antes de la cantidad)
+          const descripcion = resto.substring(0, resto.indexOf(cantMatch[0])).trim();
+          
+          if (cantidad > 0 && cantidad < 10000 && descripcion.length > 3) {
+            productos.push({
+              codigo: codigo,
+              descripcion: descripcion,
+              cantidad: cantidad
+            });
+            console.log('Producto detectado (método flexible):', { codigo, descripcion, cantidad });
+          }
+        }
       }
     }
   }
@@ -224,6 +228,7 @@ function procesarTextoGuia(texto) {
 
   return {
     numeroGuia,
+    fechaEmision,
     productos,
     cantidadProductos: productos.length
   };
