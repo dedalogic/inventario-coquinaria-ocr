@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inventario Coquinaria</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#4a0404">
@@ -33,7 +34,7 @@
             --btn-cta-shadow: rgba(184, 92, 103, 0.4);
 
             --header-height: 75px; 
-            --controls-height: 115px; 
+            --controls-height: 145px;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -200,17 +201,30 @@
         <div class="progress-line"><div class="progress-fill" id="progressBar"></div></div>
     </div>
 
-    <!-- STICKY TOOLBAR -->
-    <div class="sticky-controls" id="stickyControls">
-        <div class="search-container">
-            <div class="search-wrapper">
-                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-                <input type="text" class="search-input" id="searchInput" placeholder="Buscar producto..." onkeyup="handleSearch(this)">
-                <button class="clear-search" onclick="clearSearch()">✕</button>
-            </div>
-        </div>
-        <div id="toolbarMenu" class="menu-scroll"></div>
+<div class="sticky-controls" id="stickyControls">
+<div class="search-container">
+    <div class="search-wrapper">
+        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+        <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre, SKU, marca..." 
+               oninput="handleSearchInput(this)" 
+               onfocus="showSuggestions()" 
+               onblur="hideSuggestionsDelayed()">
+        <button class="clear-search" onclick="clearSearch()">✕</button>
+        
+        <!-- SUGGESTIONS DROPDOWN -->
+        <div class="search-suggestions" id="searchSuggestions"></div>
     </div>
+</div>
+    
+    <!-- FILTROS TOGGLE -->
+    <div id="filterToggles"></div>
+    
+    <!-- OPCIONES DE FILTROS -->
+    <div id="filterOptions"></div>
+    
+    <!-- TOOLBAR DINÁMICO -->
+    <div id="toolbarMenu" class="menu-scroll"></div>
+</div>
 
     <!-- MAIN PRODUCT LIST -->
     <div id="view-products">
@@ -283,6 +297,180 @@
     </div>
 
     <div id="toast" class="toast"></div>
+    /* FILTROS EXPANDIBLES */
+.filter-toggle-container {
+    display: flex; gap: 8px; padding: 0 20px 8px 20px;
+}
+.filter-toggle {
+    flex: 1;
+    background: white;
+    border: 1px solid var(--border-light);
+    padding: 10px 16px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--text-primary);
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+}
+.filter-toggle:active { transform: scale(0.98); }
+.filter-toggle.active {
+    background: var(--text-rosa-palo);
+    color: white;
+    border-color: var(--text-rosa-palo);
+    box-shadow: 0 4px 10px rgba(184, 92, 103, 0.3);
+}
+.filter-toggle svg {
+    width: 16px; height: 16px; 
+    transition: transform 0.2s;
+}
+.filter-toggle.expanded svg {
+    transform: rotate(180deg);
+}
+.filter-label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.filter-selected {
+    font-size: 12px;
+    opacity: 0.8;
+    font-weight: 400;
+}
+
+/* OPCIONES DE FILTRO */
+.filter-options {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out;
+    padding: 0 20px;
+}
+.filter-options.expanded {
+    max-height: 60px;
+    padding: 0 20px 8px 20px;
+}
+.filter-chips {
+    display: flex;
+    overflow-x: auto;
+    gap: 8px;
+    scrollbar-width: none;
+    padding: 2px 0;
+}
+.filter-chips::-webkit-scrollbar { display: none; }
+.filter-chip {
+    display: inline-flex;
+    align-items: center;
+    background: white;
+    border: 1px solid var(--border-light);
+    padding: 8px 16px;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-secondary);
+    white-space: nowrap;
+    cursor: pointer;
+    transition: all 0.2s;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    flex-shrink: 0;
+}
+.filter-chip.active {
+    background: var(--text-rosa-palo);
+    color: white;
+    border-color: var(--text-rosa-palo);
+    box-shadow: 0 4px 10px rgba(184, 92, 103, 0.3);
+    font-weight: 600;
+}
+.filter-chip:active { transform: scale(0.97); }
+    /* BÚSQUEDA INTELIGENTE */
+.search-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: white;
+    border: 1px solid var(--border-light);
+    border-top: none;
+    border-radius: 0 0 12px 12px;
+    max-height: 250px;
+    overflow-y: auto;
+    z-index: 1000;
+    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    display: none;
+}
+.search-suggestions.active {
+    display: block;
+}
+.suggestion-item {
+    padding: 12px 16px;
+    cursor: pointer;
+    border-bottom: 1px solid #f1f5f9;
+    transition: background 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.suggestion-item:hover {
+    background: #f8fafc;
+}
+.suggestion-item:last-child {
+    border-bottom: none;
+}
+.suggestion-icon {
+    width: 16px;
+    height: 16px;
+    color: #94a3b8;
+    flex-shrink: 0;
+}
+.suggestion-text {
+    flex: 1;
+    font-size: 14px;
+    color: #1e293b;
+}
+.suggestion-meta {
+    font-size: 11px;
+    color: #94a3b8;
+    background: #f1f5f9;
+    padding: 2px 6px;
+    border-radius: 4px;
+    flex-shrink: 0;
+}
+.suggestion-highlight {
+    background: #fef3c7;
+    font-weight: 600;
+    padding: 0 2px;
+    border-radius: 2px;
+}
+.suggestion-header {
+    padding: 8px 16px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    background: #f8fafc;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+.clear-history {
+    color: var(--text-rosa-palo);
+    cursor: pointer;
+    font-size: 10px;
+}
+.clear-history:hover {
+    text-decoration: underline;
+}
+.no-results {
+    padding: 20px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
+}
 
     <script>
         // ============================================
@@ -686,6 +874,10 @@ const rawProducts = [
         let currentCategory = 'Todos';
         let selectedDateKey = "";
         let searchTerm = '';
+        let searchSuggestions = [];
+let searchHistory = JSON.parse(localStorage.getItem('searchHistory') || '[]');
+        let currentBrand = 'Todas';
+let filterExpanded = null; // 'category' | 'brand' | null
         
         let dataCount = {};
         let dataReception = {};
@@ -756,6 +948,7 @@ const rawProducts = [
         // ============================================
         function switchMainView(view) {
             mainView = view;
+            filterExpanded = null;
             
             document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
             document.getElementById(`nav-${view}`).classList.add('active');
@@ -776,7 +969,7 @@ const rawProducts = [
             toolbar.innerHTML = ''; 
 
             if (view === 'catalog') {
-                renderCategories(toolbar);
+               renderFilters();
             } else if (view === 'stock') {
                 renderStockTools(toolbar);
             }
@@ -784,6 +977,95 @@ const rawProducts = [
             renderProducts();
             window.scrollTo(0,0);
         }
+        // ============================================
+// FILTROS EXPANDIBLES
+// ============================================
+function toggleFilter(type) {
+    if (filterExpanded === type) {
+        filterExpanded = null;
+    } else {
+        filterExpanded = type;
+    }
+    renderFilters();
+}
+
+function selectFilterOption(type, value) {
+    if (type === 'category') {
+        currentCategory = value;
+    } else if (type === 'brand') {
+        currentBrand = value;
+    }
+    renderFilters();
+    renderProducts();
+}
+
+function renderFilters() {
+    const togglesContainer = document.getElementById('filterToggles');
+    const optionsContainer = document.getElementById('filterOptions');
+    
+    if (!togglesContainer || !optionsContainer) return;
+    
+    // BOTONES TOGGLE
+    const categoryLabel = currentCategory !== 'Todos' ? currentCategory : '';
+    const brandLabel = currentBrand !== 'Todas' ? currentBrand : '';
+    
+    togglesContainer.innerHTML = `
+        <div class="filter-toggle-container">
+            <div class="filter-toggle ${filterExpanded === 'category' ? 'expanded active' : ''}" onclick="toggleFilter('category')">
+                <div class="filter-label">
+                    <span>📑 Categoría</span>
+                    ${categoryLabel ? `<span class="filter-selected">${categoryLabel}</span>` : ''}
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </div>
+            
+            <div class="filter-toggle ${filterExpanded === 'brand' ? 'expanded active' : ''}" onclick="toggleFilter('brand')">
+                <div class="filter-label">
+                    <span>🏷️ Marca</span>
+                    ${brandLabel ? `<span class="filter-selected">${brandLabel}</span>` : ''}
+                </div>
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </div>
+        </div>
+    `;
+    
+    // OPCIONES
+    if (filterExpanded === 'category') {
+        const categories = ['Todos', ...CATEGORIES];
+        optionsContainer.innerHTML = `
+            <div class="filter-options expanded">
+                <div class="filter-chips">
+                    ${categories.map(cat => `
+                        <div class="filter-chip ${currentCategory === cat ? 'active' : ''}" 
+                             onclick="selectFilterOption('category', '${cat}')">
+                            ${cat}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    } else if (filterExpanded === 'brand') {
+        const brands = ['Todas', ...new Set(rawProducts.map(p => p.brand).filter(Boolean).sort())];
+        optionsContainer.innerHTML = `
+            <div class="filter-options expanded">
+                <div class="filter-chips">
+                    ${brands.map(brand => `
+                        <div class="filter-chip ${currentBrand === brand ? 'active' : ''}" 
+                             onclick="selectFilterOption('brand', '${brand}')">
+                            ${brand}
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+    } else {
+        optionsContainer.innerHTML = '<div class="filter-options"></div>';
+    }
+}
 
         function renderCategories(container) {
             const cats = ['Todos', ...CATEGORIES];
@@ -1004,15 +1286,20 @@ function mostrarResumenGuia(data, importados, noEncontrados) {
             </div>
         </div>
         
-        <button class="btn-cta" onclick="iniciarRecepcionGuia(${JSON.stringify(data.productos)}, '${data.numeroGuia}')" style="width: 100%;">
+        <button class="btn-cta" onclick="iniciarRecepcionGuia()" style="width: 100%;">
             Iniciar Recepción →
         </button>
     `;
     
+    // NUEVO: Guardar datos en variable global
+    window.tempRecepcionData = {
+        productos: data.productos,
+        numeroGuia: data.numeroGuia
+    };
+    
     modalContent.innerHTML = html;
     modal.classList.add('active');
 }
-
         // ============================================
         // RENDER PRODUCTS
         // ============================================
@@ -1037,12 +1324,21 @@ function mostrarResumenGuia(data, importados, noEncontrados) {
                     if (!matchesName && !matchesSku && !matchesBrand && !matchesOrigin) return false;
                 }
                 
-                if (mainView === 'catalog') {
-                    if (currentCategory !== 'Todos') {
-                        if (currentCategory === 'Otros') return !p.category;
-                        return p.category === currentCategory;
-                    }
-                }
+if (mainView === 'catalog') {
+    // Filtro por categoría
+    if (currentCategory !== 'Todos') {
+        if (currentCategory === 'Otros') {
+            if (p.category) return false;
+        } else {
+            if (p.category !== currentCategory) return false;
+        }
+    }
+    
+    // Filtro por marca
+    if (currentBrand !== 'Todas') {
+        if (p.brand !== currentBrand) return false;
+    }
+}
                 return true;
             });
 
@@ -1287,20 +1583,204 @@ function mostrarResumenGuia(data, importados, noEncontrados) {
         // ============================================
         // UTILS
         // ============================================
-        function handleSearch(el) {
-            searchTerm = el.value.toLowerCase();
-            document.querySelector('.clear-search').style.display = searchTerm ? 'block' : 'none';
-            renderProducts();
+// ============================================
+// BÚSQUEDA INTELIGENTE
+// ============================================
+function handleSearchInput(el) {
+    searchTerm = el.value.toLowerCase().trim();
+    document.querySelector('.clear-search').style.display = searchTerm ? 'block' : 'none';
+    
+    if (searchTerm.length >= 2) {
+        generateSuggestions();
+        showSuggestions();
+    } else {
+        hideSuggestions();
+    }
+    
+    renderProducts();
+}
+
+function generateSuggestions() {
+    const suggestions = [];
+    const term = searchTerm;
+    
+    // Búsqueda en productos
+    rawProducts.forEach(p => {
+        let matchType = '';
+        let matchValue = '';
+        
+        if (p.sku.toLowerCase().includes(term)) {
+            matchType = 'SKU';
+            matchValue = p.sku;
+        } else if (p.name.toLowerCase().includes(term)) {
+            matchType = 'Producto';
+            matchValue = p.name;
+        } else if (p.brand && p.brand.toLowerCase().includes(term)) {
+            matchType = 'Marca';
+            matchValue = p.brand;
+        } else if (p.origin && p.origin.toLowerCase().includes(term)) {
+            matchType = 'Origen';
+            matchValue = p.origin;
         }
-        function clearSearch() {
-            searchTerm = '';
-            document.getElementById('searchInput').value = '';
-            document.querySelector('.clear-search').style.display = 'none';
-            renderProducts();
+        
+        if (matchType) {
+            suggestions.push({
+                type: matchType,
+                value: matchValue,
+                product: p,
+                priority: matchType === 'SKU' ? 1 : matchType === 'Producto' ? 2 : 3
+            });
         }
-        function setupSearch() {
-             document.getElementById('searchInput').addEventListener('keyup', (e) => handleSearch(e.target));
+    });
+    
+    // Ordenar por prioridad y limitar
+    searchSuggestions = suggestions
+        .sort((a, b) => a.priority - b.priority)
+        .slice(0, 8);
+}
+
+function showSuggestions() {
+    const container = document.getElementById('searchSuggestions');
+    if (!container) return;
+    
+    if (searchSuggestions.length === 0 && searchTerm.length >= 2) {
+        container.innerHTML = '<div class="no-results">No se encontraron resultados</div>';
+        container.classList.add('active');
+        return;
+    }
+    
+    if (searchSuggestions.length === 0) {
+        // Mostrar historial si no hay búsqueda
+        if (searchHistory.length > 0) {
+            let html = `
+                <div class="suggestion-header">
+                    Búsquedas recientes
+                    <span class="clear-history" onclick="clearSearchHistory()">Limpiar</span>
+                </div>
+            `;
+            
+            searchHistory.slice(0, 5).forEach(term => {
+                html += `
+                    <div class="suggestion-item" onmousedown="selectSuggestion('${term}')">
+                        <svg class="suggestion-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="suggestion-text">${term}</span>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+            container.classList.add('active');
         }
+        return;
+    }
+    
+    let html = '<div class="suggestion-header">Sugerencias</div>';
+    
+    searchSuggestions.forEach(s => {
+        const highlighted = highlightMatch(s.value, searchTerm);
+        const icon = getSuggestionIcon(s.type);
+        
+        html += `
+            <div class="suggestion-item" onmousedown="selectSuggestionProduct('${s.product.sku}')">
+                ${icon}
+                <span class="suggestion-text">${highlighted}</span>
+                <span class="suggestion-meta">${s.type}</span>
+            </div>
+        `;
+    });
+    
+    container.innerHTML = html;
+    container.classList.add('active');
+}
+
+function hideSuggestions() {
+    const container = document.getElementById('searchSuggestions');
+    if (container) container.classList.remove('active');
+}
+
+function hideSuggestionsDelayed() {
+    setTimeout(() => hideSuggestions(), 200);
+}
+
+function highlightMatch(text, term) {
+    const index = text.toLowerCase().indexOf(term);
+    if (index === -1) return text;
+    
+    const before = text.substring(0, index);
+    const match = text.substring(index, index + term.length);
+    const after = text.substring(index + term.length);
+    
+    return `${before}<span class="suggestion-highlight">${match}</span>${after}`;
+}
+
+function getSuggestionIcon(type) {
+    const icons = {
+        'SKU': '<svg class="suggestion-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" /></svg>',
+        'Producto': '<svg class="suggestion-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>',
+        'Marca': '<svg class="suggestion-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z" /></svg>',
+        'Origen': '<svg class="suggestion-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>'
+    };
+    return icons[type] || icons['Producto'];
+}
+
+function selectSuggestion(term) {
+    document.getElementById('searchInput').value = term;
+    searchTerm = term.toLowerCase();
+    document.querySelector('.clear-search').style.display = 'block';
+    
+    addToSearchHistory(term);
+    hideSuggestions();
+    renderProducts();
+}
+
+function selectSuggestionProduct(sku) {
+    const product = rawProducts.find(p => p.sku === sku);
+    if (!product) return;
+    
+    document.getElementById('searchInput').value = product.name;
+    searchTerm = product.name.toLowerCase();
+    document.querySelector('.clear-search').style.display = 'block';
+    
+    addToSearchHistory(product.name);
+    hideSuggestions();
+    renderProducts();
+    
+    // Opcional: abrir detalle del producto
+    setTimeout(() => openDetail(sku), 300);
+}
+
+function addToSearchHistory(term) {
+    // Evitar duplicados
+    searchHistory = searchHistory.filter(t => t !== term);
+    // Agregar al inicio
+    searchHistory.unshift(term);
+    // Mantener solo últimas 10
+    searchHistory = searchHistory.slice(0, 10);
+    // Guardar
+    localStorage.setItem('searchHistory', JSON.stringify(searchHistory));
+}
+
+function clearSearchHistory() {
+    searchHistory = [];
+    localStorage.removeItem('searchHistory');
+    hideSuggestions();
+    showToast('🗑️ Historial borrado');
+}
+
+function clearSearch() {
+    searchTerm = '';
+    searchSuggestions = [];
+    document.getElementById('searchInput').value = '';
+    document.querySelector('.clear-search').style.display = 'none';
+    hideSuggestions();
+    renderProducts();
+}
+
+function setupSearch() {
+    // Ya no necesitamos addEventListener adicional, está en el HTML
+}
         function handleFileImport() { showToast("Importación no configurada en demo"); }
         function showToast(msg) {
             const t = document.getElementById('toast');
@@ -1671,7 +2151,15 @@ function mostrarResumenGuia(data, importados, noEncontrados) {
     verificados: []
 };
 
-function iniciarRecepcionGuia(productos, numeroGuia) {
+function iniciarRecepcionGuia() {
+    // Obtener datos de la variable global
+    if (!window.tempRecepcionData) {
+        showToast('❌ Error: No se encontraron datos');
+        return;
+    }
+    
+    const { productos, numeroGuia } = window.tempRecepcionData;
+    
     recepcionActual = {
         numeroGuia: numeroGuia,
         productos: productos,
@@ -1790,7 +2278,10 @@ function confirmarCantidadAjustada() {
     const cantidad = parseInt(document.getElementById('cantidadAjustada').value);
     verificarProducto(cantidad, false);
 }
-        function mostrarPantallaFirma() {
+
+
+        ```javascript
+function mostrarPantallaFirma() {
     const modal = document.getElementById('shareModal');
     const modalContent = modal.querySelector('.modal-content');
     
@@ -1798,89 +2289,123 @@ function confirmarCantidadAjustada() {
     const totalDiff = recepcionActual.verificados.filter(v => !v.correcto).length;
     
     let html = `
-        <h3 style="text-align: center; margin-bottom: 20px;">Firma de Recepción</h3>
+        Firma de Recepción
         
-        <div style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                <span style="color: #64748b;">Productos OK:</span>
-                <span style="color: #059669; font-weight: 700;">✓ ${totalOK}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-                <span style="color: #64748b;">Con diferencias:</span>
-                <span style="color: #dc2626; font-weight: 700;">⚠️ ${totalDiff}</span>
-            </div>
-        </div>
         
-        <div style="margin-bottom: 20px;">
-            <label style="display: block; font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">Firme aquí:</label>
-            <canvas id="signatureCanvas" style="width: 100%; height: 200px; border: 2px solid #e2e8f0; border-radius: 8px; background: white; touch-action: none;"></canvas>
-            <button onclick="limpiarFirma()" style="margin-top: 10px; padding: 8px 16px; border: 1px solid #e2e8f0; background: white; border-radius: 6px; font-size: 13px; cursor: pointer;">
+            
+                Productos OK:
+                ✓ ${totalOK}
+            
+            
+                Con diferencias:
+                ⚠️ ${totalDiff}
+            
+        
+        
+        
+            Firme aquí:
+            
+            
                 🔄 Limpiar Firma
-            </button>
-        </div>
+            
         
-        <button onclick="finalizarRecepcionConFirma()" class="btn-cta" style="width: 100%;">
+        
+        
             📄 Generar PDF Firmado
-        </button>
+        
     `;
     
     modalContent.innerHTML = html;
     
-    // Inicializar canvas para firma
+    // ⚠️ IMPORTANTE: Inicializar canvas DESPUÉS de insertar HTML
     setTimeout(() => {
-        const canvas = document.getElementById('signatureCanvas');
-        const ctx = canvas.getContext('2d');
-        
-        // Ajustar tamaño del canvas
-        canvas.width = canvas.offsetWidth;
-        canvas.height = 200;
-        
-        let drawing = false;
-        
-        const startDrawing = (e) => {
-            drawing = true;
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-            ctx.beginPath();
-            ctx.moveTo(x, y);
-        };
-        
-        const draw = (e) => {
-            if (!drawing) return;
-            e.preventDefault();
-            const rect = canvas.getBoundingClientRect();
-            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-            ctx.lineTo(x, y);
-            ctx.strokeStyle = '#1e293b';
-            ctx.lineWidth = 2;
-            ctx.lineCap = 'round';
-            ctx.stroke();
-        };
-        
-        const stopDrawing = () => {
-            drawing = false;
-        };
-        
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('touchstart', startDrawing);
-        canvas.addEventListener('touchmove', draw);
-        canvas.addEventListener('touchend', stopDrawing);
-        
-        window.limpiarFirma = () => {
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-        };
+        inicializarCanvasFirma();
     }, 100);
 }
-        async function finalizarRecepcionConFirma() {
+    function inicializarCanvasFirma() {
     const canvas = document.getElementById('signatureCanvas');
+    if (!canvas) {
+        console.error('❌ Canvas no encontrado');
+        return;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Ajustar tamaño real del canvas
+    canvas.width = canvas.offsetWidth;
+    canvas.height = 200;
+    
+    let drawing = false;
+    
+    const startDrawing = (e) => {
+        drawing = true;
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+    };
+    
+    const draw = (e) => {
+        if (!drawing) return;
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+        ctx.lineTo(x, y);
+        ctx.strokeStyle = '#1e293b';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.stroke();
+    };
+    
+    const stopDrawing = () => {
+        drawing = false;
+    };
+    
+    // Eventos mouse
+    canvas.addEventListener('mousedown', startDrawing);
+    canvas.addEventListener('mousemove', draw);
+    canvas.addEventListener('mouseup', stopDrawing);
+    canvas.addEventListener('mouseout', stopDrawing);
+    
+    // Eventos touch
+    canvas.addEventListener('touchstart', startDrawing);
+    canvas.addEventListener('touchmove', draw);
+    canvas.addEventListener('touchend', stopDrawing);
+    
+    // Función limpiar (global)
+    window.limpiarFirma = () => {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    };
+    
+    console.log('✅ Canvas de firma inicializado');
+}
+   async function finalizarRecepcionConFirma() {
+    const canvas = document.getElementById('signatureCanvas');
+    
+    if (!canvas) {
+        showToast('❌ Error: Canvas no encontrado');
+        return;
+    }
+    
+    // Verificar que hay firma dibujada
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const hasDrawing = imageData.data.some(channel => channel !== 0);
+    
+    if (!hasDrawing) {
+        showToast('⚠️ Por favor dibuje su firma');
+        return;
+    }
+    
     const firmaDataURL = canvas.toDataURL('image/png');
     
-    // Cargar jsPDF
+    showToast('📄 Generando PDF...');
+    
+    // Cargar jsPDF si no está
     if (!window.jspdf) {
+        showToast('⏳ Cargando librería PDF...');
         const script = document.createElement('script');
         script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
         await new Promise(resolve => {
@@ -1892,33 +2417,32 @@ function confirmarCantidadAjustada() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
-    // Header
-    doc.setFontSize(20);
+    // ========== HEADER ==========
+    doc.setFillColor(74, 4, 4);
+    doc.rect(0, 0, 210, 30, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(22);
     doc.setFont('helvetica', 'bold');
-    doc.text('RECEPCIÓN DE MERCADERÍA', 105, 20, { align: 'center' });
-    
-    doc.setFontSize(10);
-    doc.setFont('helvetica', 'normal');
-    doc.text('COQUINARIA', 105, 28, { align: 'center' });
-    
-    // Nº Guía
-    doc.setFillColor(254, 226, 226);
-    doc.rect(20, 35, 170, 15, 'F');
+    doc.text('🍷 COQUINARIA', 105, 15, { align: 'center' });
     doc.setFontSize(12);
-    doc.setFont('helvetica', 'bold');
-    doc.text(`Nº GUÍA: ${recepcionActual.numeroGuia}`, 105, 44, { align: 'center' });
-    
-    // Info
-    doc.setFontSize(9);
     doc.setFont('helvetica', 'normal');
-    doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, 20, 58);
-    doc.text(`Hora: ${new Date().toLocaleTimeString('es-CL')}`, 20, 63);
+    doc.text('RECEPCIÓN DE MERCADERÍA', 105, 23, { align: 'center' });
     
-    // Tabla de productos
-    let y = 75;
-    doc.setFontSize(10);
+    // ========== INFO DOCUMENTO ==========
+    doc.setTextColor(0, 0, 0);
+    doc.setFontSize(11);
     doc.setFont('helvetica', 'bold');
-    doc.text('PRODUCTOS RECIBIDOS', 20, y);
+    doc.text(`Nº GUÍA: ${recepcionActual.numeroGuia}`, 20, 40);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, 20, 47);
+    doc.text(`Hora: ${new Date().toLocaleTimeString('es-CL')}`, 20, 52);
+    
+    // ========== TABLA PRODUCTOS ==========
+    let y = 65;
+    doc.setFontSize(11);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PRODUCTOS VERIFICADOS', 20, y);
     
     y += 8;
     recepcionActual.verificados.forEach((item, i) => {
@@ -1933,46 +2457,90 @@ function confirmarCantidadAjustada() {
         const estado = item.correcto ? '✓ OK' : '⚠️ DIFERENCIA';
         const color = item.correcto ? [5, 150, 105] : [220, 38, 38];
         
+        // Nombre producto
         doc.text(`${i + 1}. ${item.descripcion}`, 20, y);
-        doc.text(`SKU: ${item.sku}`, 25, y + 5);
-        doc.text(`Guía: ${item.cantidadGuia} | Recibido: ${item.cantidadRecibida}`, 25, y + 10);
-        
-        doc.setTextColor(...color);
-        doc.text(estado, 170, y + 5);
+        // SKU
+        doc.setFontSize(8);
+        doc.setTextColor(100, 100, 100);
+        doc.text(`SKU: ${item.sku}`, 25, y + 4);
+        // Cantidades
+        doc.setFontSize(9);
         doc.setTextColor(0, 0, 0);
+        doc.text(`Guía: ${item.cantidadGuia} | Recibido: ${item.cantidadRecibida}`, 25, y + 9);
         
-        y += 20;
+        // Estado
+        doc.setTextColor(...color);
+        doc.setFont('helvetica', 'bold');
+        doc.text(estado, 160, y + 5);
+        doc.setTextColor(0, 0, 0);
+        doc.setFont('helvetica', 'normal');
+        
+        y += 16;
     });
     
-    // Firma
-    y += 10;
+    // ========== RESUMEN ==========
+    y += 5;
     if (y > 240) {
         doc.addPage();
         y = 20;
     }
     
-    doc.setFont('helvetica', 'bold');
-    doc.text('FIRMA DE RECEPCIÓN:', 20, y);
-    doc.addImage(firmaDataURL, 'PNG', 20, y + 5, 80, 30);
+    doc.setDrawColor(200, 200, 200);
+    doc.line(20, y, 190, y);
+    y += 8;
     
-    // Guardar
-    const fileName = `Recepcion_${recepcionActual.numeroGuia}_${new Date().toISOString().split('T')[0]}.pdf`;
+    const totalOK = recepcionActual.verificados.filter(v => v.correcto).length;
+    const totalDiff = recepcionActual.verificados.filter(v => !v.correcto).length;
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('RESUMEN:', 20, y);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Total productos: ${recepcionActual.verificados.length}`, 25, y + 6);
+    doc.setTextColor(5, 150, 105);
+    doc.text(`Productos OK: ${totalOK}`, 25, y + 12);
+    doc.setTextColor(220, 38, 38);
+    doc.text(`Con diferencias: ${totalDiff}`, 25, y + 18);
+    doc.setTextColor(0, 0, 0);
+    
+    // ========== FIRMA ==========
+    y += 30;
+    if (y > 230) {
+        doc.addPage();
+        y = 20;
+    }
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text('FIRMA DE RECEPCIÓN:', 20, y);
+    
+    // Insertar imagen de firma
+    doc.addImage(firmaDataURL, 'PNG', 20, y + 5, 70, 25);
+    
+    // Línea de firma
+    doc.setDrawColor(0, 0, 0);
+    doc.line(20, y + 32, 90, y + 32);
+    
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    doc.text(`Firmado el: ${new Date().toLocaleString('es-CL')}`, 20, y + 37);
+    
+    // ========== FOOTER ==========
+    doc.setFontSize(8);
+    doc.setTextColor(100, 100, 100);
+    doc.text('Documento generado automáticamente por Sistema Coquinaria', 105, 285, { align: 'center' });
+    
+    // ========== GUARDAR ==========
+    const fileName = `Recepcion_${recepcionActual.numeroGuia}_${new Date().toISOString().split('T')[0]}_FIRMADO.pdf`;
     doc.save(fileName);
     
-    showToast('✅ PDF generado correctamente');
+    showToast('✅ PDF firmado descargado');
     
-    // Opción de enviar por WhatsApp
+    // Cerrar modal y limpiar
     setTimeout(() => {
-        if (confirm('¿Desea enviar el PDF por WhatsApp?')) {
-            const pdfBlob = doc.output('blob');
-            // Aquí implementarías el envío real del PDF
-            showToast('📱 Abriendo WhatsApp...');
-            window.open('https://wa.me/?text=' + encodeURIComponent(`Recepción completada: Guía ${recepcionActual.numeroGuia}`));
-        }
-        
         closeShareModal();
         renderProducts();
-    }, 500);
+    }, 1000);
 }
     </script>
 </body>
