@@ -4,14 +4,17 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inventario Coquinaria</title>
+    
+    <!-- Librerías y Recursos Externos -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
     <link rel="manifest" href="/manifest.json">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Configuración PWA y Móvil -->
     <meta name="theme-color" content="#4a0404">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100;200;300;400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --header-bg-gradient: linear-gradient(135deg, #4a0404 0%, #2c0202 100%);
@@ -35,6 +38,7 @@
 
             --header-height: 75px; 
             --controls-height: 145px;
+            --nav-bg: rgba(255, 255, 255, 0.8);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
@@ -89,7 +93,7 @@
 
         .menu-chip { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid var(--border-light); padding: 8px 16px; border-radius: 12px; font-size: 13px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.03); flex-shrink: 0; height: 38px; }
         .menu-chip.active { background: var(--text-rosa-palo); color: white; border-color: var(--text-rosa-palo); box-shadow: 0 4px 10px rgba(184, 92, 103, 0.3); font-weight: 600; }
-        /* Colores Específicos */
+        
         .menu-chip.count-active { background: var(--pantone-7747c); color: white; border-color: var(--pantone-7747c); box-shadow: 0 4px 10px rgba(47, 92, 57, 0.3); }
         .menu-chip.recep-active { background: var(--pantone-131c); color: white; border-color: var(--pantone-131c); box-shadow: 0 4px 10px rgba(204, 138, 0, 0.3); }
         .menu-chip.sugg-active { background: var(--pantone-2379c); color: white; border-color: var(--pantone-2379c); box-shadow: 0 4px 10px rgba(195, 31, 117, 0.3); }
@@ -97,7 +101,7 @@
         .menu-chip svg { width: 16px; height: 16px; stroke-width: 2; }
         .menu-chip:active { transform: scale(0.97); }
 
-        /* LISTA */
+        /* LISTA DE PRODUCTOS */
         .products-list { padding: 0 20px; }
         .product-card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid transparent; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.1s; }
         .product-card:active { transform: scale(0.99); background-color: #fafafa; }
@@ -119,18 +123,9 @@
         .stock-input { width: 34px; border: none; background: transparent; text-align: center; font-weight: 700; font-size: 15px; color: var(--text-primary); }
         .catalog-display { font-size: 13px; font-weight: 600; color: #94a3b8; min-width: 40px; text-align: center; }
 
-        /* Document Input (Recepción) */
-        .doc-input-container {
-            padding: 10px 20px;
-            background: #fffbf0;
-            border-bottom: 1px solid #f0e6d2;
-            margin-bottom: 10px;
-            display: flex; align-items: center; gap: 10px;
-        }
-        .doc-input {
-            width: 100%; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px;
-            font-size: 14px; outline: none;
-        }
+        /* RECEPCIÓN DOCUMENTOS */
+        .doc-input-container { padding: 10px 20px; background: #fffbf0; border-bottom: 1px solid #f0e6d2; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+        .doc-input { width: 100%; border: 1px solid #e2e8f0; padding: 10px; border-radius: 8px; font-size: 14px; outline: none; }
 
         /* CTA */
         .cta-container { padding: 20px; padding-bottom: 40px; display: flex; gap: 10px; flex-direction: column; }
@@ -138,7 +133,7 @@
         .btn-cta:active { transform: scale(0.98); }
         .btn-cta.secondary { background: white; color: var(--text-primary); border: 1px solid #e2e8f0; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
 
-        /* OVERLAY */
+        /* OVERLAY DETALLE */
         .product-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.3); backdrop-filter: blur(8px); z-index: 3000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
         .product-overlay.active { opacity: 1; pointer-events: auto; }
         .detail-card { background: white; width: 90%; max-width: 400px; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transform: scale(0.95); transition: transform 0.2s; max-height: 85vh; display: flex; flex-direction: column; }
@@ -167,23 +162,45 @@
 
         .toast { position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 12px 24px; border-radius: 30px; font-size: 14px; font-weight: 500; opacity: 0; pointer-events: none; transition: opacity 0.3s; z-index: 5000; box-shadow: 0 10px 20px rgba(0,0,0,0.2); }
         .toast.show { opacity: 1; }
-        .empty-state { text-align: center; padding: 40px; color: #94a3b8; font-size: 14px; }
-        #dateInput { position: absolute; opacity: 0; width: 0; height: 0; bottom: 0; right: 0; pointer-events: none; }
-        .history-item { background: white; padding: 18px; border-radius: 16px; margin-bottom: 12px; display: flex; justify-content: space-between; align-items: center; border: 1px solid rgba(0,0,0,0.05); box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
         
-        #scanInput { display: none; }
+        /* FILTROS EXPANDIBLES */
+        .filter-toggle-container { display: flex; gap: 8px; padding: 0 20px 8px 20px; }
+        .filter-toggle { flex: 1; background: white; border: 1px solid var(--border-light); padding: 10px 16px; border-radius: 10px; font-size: 14px; font-weight: 500; color: var(--text-primary); cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+        .filter-toggle:active { transform: scale(0.98); }
+        .filter-toggle.active { background: var(--text-rosa-palo); color: white; border-color: var(--text-rosa-palo); box-shadow: 0 4px 10px rgba(184, 92, 103, 0.3); }
+        .filter-toggle svg { width: 16px; height: 16px; transition: transform 0.2s; }
+        .filter-toggle.expanded svg { transform: rotate(180deg); }
+
+        .filter-options { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-out; padding: 0 20px; }
+        .filter-options.expanded { max-height: 60px; padding: 0 20px 8px 20px; }
+        .filter-chips { display: flex; overflow-x: auto; gap: 8px; scrollbar-width: none; padding: 2px 0; }
+        .filter-chip { display: inline-flex; align-items: center; background: white; border: 1px solid var(--border-light); padding: 8px 16px; border-radius: 12px; font-size: 13px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.03); flex-shrink: 0; }
+        .filter-chip.active { background: var(--text-rosa-palo); color: white; border-color: var(--text-rosa-palo); box-shadow: 0 4px 10px rgba(184, 92, 103, 0.3); font-weight: 600; }
+
+        /* BÚSQUEDA */
+        .search-suggestions { position: absolute; top: 100%; left: 0; right: 0; background: white; border: 1px solid var(--border-light); border-top: none; border-radius: 0 0 12px 12px; max-height: 250px; overflow-y: auto; z-index: 1000; box-shadow: 0 8px 16px rgba(0,0,0,0.1); display: none; }
+        .search-suggestions.active { display: block; }
+        .suggestion-item { padding: 12px 16px; cursor: pointer; border-bottom: 1px solid #f1f5f9; transition: background 0.15s; display: flex; align-items: center; gap: 10px; }
+        .suggestion-item:hover { background: #f8fafc; }
+        .suggestion-text { flex: 1; font-size: 14px; color: #1e293b; }
+        .suggestion-meta { font-size: 11px; color: #94a3b8; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; flex-shrink: 0; }
         
-        /* Modal Styles */
+        /* MODAL */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 4000; align-items: center; justify-content: center; }
         .modal.active { display: flex; }
         .modal-content { background: white; padding: 25px; border-radius: 16px; width: 90%; max-width: 350px; text-align: center; max-height: 80vh; overflow-y: auto; }
         .modal-title { font-size: 18px; font-weight: 700; margin-bottom: 20px; color: var(--text-primary); }
         .modal-actions { display: flex; flex-direction: column; gap: 10px; }
+    </style>
+</head>
 
+<body>
+    <!-- ELEMENTOS OCULTOS / INPUTS -->
     <input type="file" id="fileImport" accept=".csv,.txt" style="display:none" onchange="handleFileImport(this)">
-    <input type="file" id="scanInput" accept="image/*" capture="environment" onchange="handleScan(this)">
+    <input type="file" id="scanInput" accept="image/*" capture="environment" onchange="handleScan(this)" style="display:none">
     <input type="file" id="importExcelInput" accept=".xlsx,.xls" style="display:none" onchange="importarExcelRecepcion(this.files[0])">
-    
+    <input type="date" id="dateInput" style="position: absolute; opacity: 0; width: 0; height: 0; pointer-events: none;">
+
     <!-- HEADER -->
     <div class="header">
         <div class="header-logo">COQUINARIA</div>
@@ -194,36 +211,31 @@
             </div>
             <div id="lastSavedIndicator">Guardado</div>
         </div>
-        <input type="date" id="dateInput">
         <div class="progress-line"><div class="progress-fill" id="progressBar"></div></div>
     </div>
 
-<div class="sticky-controls" id="stickyControls">
-<div class="search-container">
-    <div class="search-wrapper">
-        <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
-        <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre, SKU, marca..." 
-               oninput="handleSearchInput(this)" 
-               onfocus="showSuggestions()" 
-               onblur="hideSuggestionsDelayed()">
-        <button class="clear-search" onclick="clearSearch()">✕</button>
+    <!-- CONTROLES FIJOS -->
+    <div class="sticky-controls" id="stickyControls">
+        <div class="search-container">
+            <div class="search-wrapper">
+                <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+                <input type="text" class="search-input" id="searchInput" placeholder="Buscar por nombre, SKU, marca..." 
+                       oninput="handleSearchInput(this)" 
+                       onfocus="showSuggestions()" 
+                       onblur="hideSuggestionsDelayed()">
+                <button class="clear-search" onclick="clearSearch()">✕</button>
+                <!-- SUGGESTIONS DROPDOWN -->
+                <div class="search-suggestions" id="searchSuggestions"></div>
+            </div>
+        </div>
         
-        <!-- SUGGESTIONS DROPDOWN -->
-        <div class="search-suggestions" id="searchSuggestions"></div>
+        <!-- FILTROS Y TOOLBAR -->
+        <div id="filterToggles" class="filter-toggle-container"></div>
+        <div id="filterOptions" class="filter-options"></div>
+        <div id="toolbarMenu" class="menu-scroll"></div>
     </div>
-</div>
-    
-    <!-- FILTROS TOGGLE -->
-    <div id="filterToggles"></div>
-    
-    <!-- OPCIONES DE FILTROS -->
-    <div id="filterOptions"></div>
-    
-    <!-- TOOLBAR DINÁMICO -->
-    <div id="toolbarMenu" class="menu-scroll"></div>
-</div>
 
-    <!-- MAIN PRODUCT LIST -->
+    <!-- VISTAS DE CONTENIDO -->
     <div id="view-products">
         <div id="docInputContainer"></div>
         <div id="productsContainer" class="products-list"></div>
@@ -233,13 +245,12 @@
         </button>
     </div>
 
-    <!-- HISTORY VIEW -->
     <div id="view-history" style="display:none; padding: 20px;">
         <h3 style="margin-bottom:15px; color:#1e293b; font-size:18px;">Historial</h3>
         <div id="historyContent"></div>
     </div>
 
-    <!-- PRODUCT DETAIL OVERLAY -->
+    <!-- OVERLAYS Y MODALES -->
     <div id="productOverlay" class="product-overlay">
         <div class="detail-card" id="detailCard">
             <button class="close-btn" onclick="closeOverlay()">✕</button>
@@ -259,7 +270,6 @@
         </div>
     </div>
 
-    <!-- SHARE MODAL -->
     <div id="shareModal" class="modal">
         <div class="modal-content">
             <h3 class="modal-title" id="shareModalTitle">Compartir Reporte</h3>
@@ -269,7 +279,7 @@
                     Enviar por WhatsApp
                 </button>
                 <button class="btn-cta secondary" onclick="executeShare('email')">
-                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2zm13 2.383-4.758 2.855L15 11.114v-5.73zm-.034 6.878L9.271 8.82 8 9.583 6.728 8.82l-5.694 3.44A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.739zM1 11.114l4.758-2.876L1 5.383v5.73z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M0 4a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V4zm2-1a1 1 0 0 0-1 1v.217l7 4.2 7-4.2V4a1 1 0 0 0-1-1H2zm13 2.383-4.758 2.855L15 11.114v-5.73zm-.034 6.878L9.271 8.82 8 9.583 6.728 8.82l-5.694 3.44A1 1 0 0 0 2 13h12a1 1 0 0 0 .966-.739zM1 11.114l4.758-2.876L1 5.383v5.73z"/></svg>
                     Enviar por Correo
                 </button>
                 <button class="btn-cta secondary" style="border:none; color:#64748b; margin-top:5px;" onclick="closeShareModal()">Cancelar</button>
@@ -277,7 +287,7 @@
         </div>
     </div>
 
-    <!-- BOTTOM NAV -->
+    <!-- NAVEGACIÓN INFERIOR -->
     <div class="bottom-nav">
         <button class="nav-item active" id="nav-catalog" onclick="switchMainView('catalog')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
@@ -294,184 +304,11 @@
     </div>
 
     <div id="toast" class="toast"></div>
-    /* FILTROS EXPANDIBLES */
-.filter-toggle-container {
-    display: flex; gap: 8px; padding: 0 20px 8px 20px;
-}
-.filter-toggle {
-    flex: 1;
-    background: white;
-    border: 1px solid var(--border-light);
-    padding: 10px 16px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 500;
-    color: var(--text-primary);
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-}
-.filter-toggle:active { transform: scale(0.98); }
-.filter-toggle.active {
-    background: var(--text-rosa-palo);
-    color: white;
-    border-color: var(--text-rosa-palo);
-    box-shadow: 0 4px 10px rgba(184, 92, 103, 0.3);
-}
-.filter-toggle svg {
-    width: 16px; height: 16px; 
-    transition: transform 0.2s;
-}
-.filter-toggle.expanded svg {
-    transform: rotate(180deg);
-}
-.filter-label {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-}
-.filter-selected {
-    font-size: 12px;
-    opacity: 0.8;
-    font-weight: 400;
-}
 
-/* OPCIONES DE FILTRO */
-.filter-options {
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease-out;
-    padding: 0 20px;
-}
-.filter-options.expanded {
-    max-height: 60px;
-    padding: 0 20px 8px 20px;
-}
-.filter-chips {
-    display: flex;
-    overflow-x: auto;
-    gap: 8px;
-    scrollbar-width: none;
-    padding: 2px 0;
-}
-.filter-chips::-webkit-scrollbar { display: none; }
-.filter-chip {
-    display: inline-flex;
-    align-items: center;
-    background: white;
-    border: 1px solid var(--border-light);
-    padding: 8px 16px;
-    border-radius: 12px;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-secondary);
-    white-space: nowrap;
-    cursor: pointer;
-    transition: all 0.2s;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
-    flex-shrink: 0;
-}
-.filter-chip.active {
-    background: var(--text-rosa-palo);
-    color: white;
-    border-color: var(--text-rosa-palo);
-    box-shadow: 0 4px 10px rgba(184, 92, 103, 0.3);
-    font-weight: 600;
-}
-.filter-chip:active { transform: scale(0.97); }
-    /* BÚSQUEDA INTELIGENTE */
-.search-suggestions {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    background: white;
-    border: 1px solid var(--border-light);
-    border-top: none;
-    border-radius: 0 0 12px 12px;
-    max-height: 250px;
-    overflow-y: auto;
-    z-index: 1000;
-    box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    display: none;
-}
-.search-suggestions.active {
-    display: block;
-}
-.suggestion-item {
-    padding: 12px 16px;
-    cursor: pointer;
-    border-bottom: 1px solid #f1f5f9;
-    transition: background 0.15s;
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-.suggestion-item:hover {
-    background: #f8fafc;
-}
-.suggestion-item:last-child {
-    border-bottom: none;
-}
-.suggestion-icon {
-    width: 16px;
-    height: 16px;
-    color: #94a3b8;
-    flex-shrink: 0;
-}
-.suggestion-text {
-    flex: 1;
-    font-size: 14px;
-    color: #1e293b;
-}
-.suggestion-meta {
-    font-size: 11px;
-    color: #94a3b8;
-    background: #f1f5f9;
-    padding: 2px 6px;
-    border-radius: 4px;
-    flex-shrink: 0;
-}
-.suggestion-highlight {
-    background: #fef3c7;
-    font-weight: 600;
-    padding: 0 2px;
-    border-radius: 2px;
-}
-.suggestion-header {
-    padding: 8px 16px;
-    font-size: 11px;
-    font-weight: 600;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    background: #f8fafc;
-    border-bottom: 1px solid #e2e8f0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-.clear-history {
-    color: var(--text-rosa-palo);
-    cursor: pointer;
-    font-size: 10px;
-}
-.clear-history:hover {
-    text-decoration: underline;
-}
-.no-results {
-    padding: 20px;
-    text-align: center;
-    color: #94a3b8;
-    font-size: 13px;
-}
-        </style>
-</head>
- <body>
+    <!-- AQUÍ PUEDES PEGAR TUS SCRIPTS -->
 
+</body>
+</html>
     <script>
         // ============================================
         // DATOS DE PRODUCTOS (INSERTA TU rawProducts AQUÍ)
