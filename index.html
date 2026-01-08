@@ -980,73 +980,38 @@ const rawProducts = [
             }
         }
 
-        function mostrarResumenGuia(data, importados, noEncontrados) {
-            const modal = document.getElementById('shareModal');
-            const modalContent = modal.querySelector('.modal-content');
-            
-            const totalUnidades = data.productos.reduce((sum, p) => sum + p.cantidad, 0);
-            
-            let html = `
-                <h3 class="modal-title">Guía Procesada ✅</h3>
-                
-                <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border: 2px solid #f87171; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
-                    <div style="font-size: 12px; color: #7f1d1d; font-weight: 600; margin-bottom: 3px;">Nº GUÍA</div>
-                    <div style="font-size: 24px; font-weight: 700; color: #991b1b; letter-spacing: 1px;">${data.numeroGuia || 'N/A'}</div>
-                </div>
-                
-                <div style="background: #eff6ff; border-radius: 10px; padding: 15px; margin-bottom: 15px;">
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #1e40af; font-weight: 600;">Productos importados:</span>
-                        <span style="color: #059669; font-weight: 700; font-size: 18px;">✓ ${importados}</span>
-                    </div>
-                    <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
-                        <span style="color: #1e40af; font-weight: 600;">Total unidades:</span>
-                        <span style="color: #1e40af; font-weight: 700; font-size: 18px;">${totalUnidades}</span>
-                    </div>
-            `;
-            
-            if (noEncontrados.length > 0) {
-                html += `
-                    <div style="display: flex; justify-content: space-between; padding-top: 8px; border-top: 1px solid #bfdbfe;">
-                        <span style="color: #dc2626; font-weight: 600;">SKUs no encontrados:</span>
-                        <span style="color: #dc2626; font-weight: 700; font-size: 18px;">⚠️ ${noEncontrados.length}</span>
-                    </div>
-                `;
-            }
-            
-            html += '</div><div style="max-height: 300px; overflow-y: auto; margin-bottom: 15px;">';
-            
-            data.productos.forEach(prod => {
-                const existe = rawProducts.find(p => p.sku === prod.codigo);
-                const borderColor = existe ? '#10b981' : '#ef4444';
-                const bgColor = existe ? '#f0fdf4' : '#fee2e2';
-                
-                html += `
-                    <div style="background: ${bgColor}; border-left: 3px solid ${borderColor}; border-radius: 6px; padding: 10px; margin-bottom: 8px; font-size: 13px;">
-                        <div style="font-weight: 600; color: #1e293b; margin-bottom: 3px;">${prod.descripcion}</div>
-                        <div style="display: flex; justify-content: space-between; color: #64748b;">
-                            <span>SKU: ${prod.codigo}</span>
-                            <span style="font-weight: 700;">Cant: ${prod.cantidad}</span>
-                        </div>
-                    </div>
-                `;
-            });
-            
-            const textoEscaped = (data.textoCompleto || '').replace(/`/g, '\\`').replace(/\$/g, '\\$');
-            
-            html += `
-                </div>
-                <button class="btn-cta" onclick="closeShareModal()" style="width: 100%; margin-top: 10px;">
-                    Continuar con Recepción
-                </button>
-                <button class="btn-cta secondary" onclick='exportarPlantillaExcel({numeroGuia: "${data.numeroGuia}", productos: ${JSON.stringify(data.productos)}, textoCompleto: \`${textoEscaped}\`})' style="width: 100%; margin-top: 10px;">
-                    📥 Descargar Plantilla Excel
-                </button>
-            `;
-            
-            modalContent.innerHTML = html;
-            modal.classList.add('active');
-        }
+function mostrarResumenGuia(data, importados, noEncontrados) {
+    const modal = document.getElementById('shareModal');
+    const modalContent = modal.querySelector('.modal-content');
+    
+    const totalUnidades = data.productos.reduce((sum, p) => sum + p.cantidad, 0);
+    
+    let html = `
+        <div style="text-align: center; padding: 20px 0;">
+            <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+            <h3 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 5px;">Guía Escaneada</h3>
+            <div style="font-size: 32px; font-weight: 800; color: #4a0404; letter-spacing: 2px; margin-bottom: 20px;">${data.numeroGuia || 'N/A'}</div>
+        </div>
+        
+        <div style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <span style="color: #64748b; font-size: 14px;">Productos detectados</span>
+                <span style="font-size: 24px; font-weight: 700; color: #059669;">${importados}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <span style="color: #64748b; font-size: 14px;">Total unidades</span>
+                <span style="font-size: 24px; font-weight: 700; color: #1e293b;">${totalUnidades}</span>
+            </div>
+        </div>
+        
+        <button class="btn-cta" onclick="iniciarRecepcionGuia(${JSON.stringify(data.productos)}, '${data.numeroGuia}')" style="width: 100%;">
+            Iniciar Recepción →
+        </button>
+    `;
+    
+    modalContent.innerHTML = html;
+    modal.classList.add('active');
+}
 
         // ============================================
         // RENDER PRODUCTS
@@ -1699,6 +1664,316 @@ const rawProducts = [
             
             showToast(`✅ Recepción ${numeroGuia} aplicada correctamente`);
         }
+        let recepcionActual = {
+    numeroGuia: '',
+    productos: [],
+    index: 0,
+    verificados: []
+};
+
+function iniciarRecepcionGuia(productos, numeroGuia) {
+    recepcionActual = {
+        numeroGuia: numeroGuia,
+        productos: productos,
+        index: 0,
+        verificados: []
+    };
+    
+    currentDocNumber = numeroGuia;
+    const docInput = document.getElementById('docNumberInput');
+    if (docInput) docInput.value = numeroGuia;
+    
+    closeShareModal();
+    mostrarVerificacionProducto();
+}
+
+function mostrarVerificacionProducto() {
+    if (recepcionActual.index >= recepcionActual.productos.length) {
+        mostrarPantallaFirma();
+        return;
+    }
+    
+    const prod = recepcionActual.productos[recepcionActual.index];
+    const productoExiste = rawProducts.find(p => p.sku === prod.codigo);
+    
+    const modal = document.getElementById('shareModal');
+    const modalContent = modal.querySelector('.modal-content');
+    
+    let html = `
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 14px; color: #64748b; margin-bottom: 5px;">Producto ${recepcionActual.index + 1} de ${recepcionActual.productos.length}</div>
+            <div style="width: 100%; height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden;">
+                <div style="width: ${((recepcionActual.index + 1) / recepcionActual.productos.length) * 100}%; height: 100%; background: #059669; transition: width 0.3s;"></div>
+            </div>
+        </div>
+        
+        <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <div style="font-size: 12px; color: #64748b; margin-bottom: 5px;">SKU ${prod.codigo}</div>
+            <div style="font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 15px;">${prod.descripcion}</div>
+            
+            <div style="background: white; border-radius: 8px; padding: 15px; margin-bottom: 15px;">
+                <div style="font-size: 13px; color: #64748b; margin-bottom: 5px;">Cantidad según guía</div>
+                <div style="font-size: 32px; font-weight: 700; color: #1e293b;">${prod.cantidad}</div>
+            </div>
+            
+            <div style="font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 10px;">¿Recibió esta cantidad?</div>
+            
+            <div style="display: flex; gap: 10px;">
+                <button onclick="verificarProducto(${prod.cantidad}, true)" style="flex: 1; padding: 15px; border: 2px solid #059669; background: #f0fdf4; color: #059669; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer;">
+                    ✓ Sí
+                </button>
+                <button onclick="mostrarAjustarCantidad()" style="flex: 1; padding: 15px; border: 2px solid #dc2626; background: #fef2f2; color: #dc2626; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer;">
+                    ✕ No
+                </button>
+            </div>
+        </div>
+    `;
+    
+    modalContent.innerHTML = html;
+    modal.classList.add('active');
+}
+
+function verificarProducto(cantidad, correcto) {
+    const prod = recepcionActual.productos[recepcionActual.index];
+    
+    recepcionActual.verificados.push({
+        sku: prod.codigo,
+        descripcion: prod.descripcion,
+        cantidadGuia: prod.cantidad,
+        cantidadRecibida: cantidad,
+        correcto: correcto
+    });
+    
+    // Aplicar a dataReception
+    dataReception[prod.codigo] = cantidad;
+    saveData();
+    
+    recepcionActual.index++;
+    mostrarVerificacionProducto();
+}
+
+function mostrarAjustarCantidad() {
+    const prod = recepcionActual.productos[recepcionActual.index];
+    const modal = document.getElementById('shareModal');
+    const modalContent = modal.querySelector('.modal-content');
+    
+    let html = `
+        <div style="text-align: center; margin-bottom: 20px;">
+            <div style="font-size: 18px; font-weight: 700; color: #1e293b;">Ajustar Cantidad</div>
+        </div>
+        
+        <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+            <div style="font-size: 13px; color: #64748b; margin-bottom: 10px;">Cantidad recibida real</div>
+            
+            <div style="display: flex; align-items: center; justify-content: center; gap: 15px; margin-bottom: 20px;">
+                <button onclick="ajustarCantidadTemp(-1)" style="width: 50px; height: 50px; border: 2px solid #e2e8f0; background: white; border-radius: 8px; font-size: 24px; font-weight: 700; color: #1e293b; cursor: pointer;">−</button>
+                <input type="number" id="cantidadAjustada" value="${prod.cantidad}" style="width: 80px; height: 50px; border: 2px solid #e2e8f0; border-radius: 8px; text-align: center; font-size: 24px; font-weight: 700; color: #1e293b;">
+                <button onclick="ajustarCantidadTemp(1)" style="width: 50px; height: 50px; border: 2px solid #e2e8f0; background: white; border-radius: 8px; font-size: 24px; font-weight: 700; color: #1e293b; cursor: pointer;">+</button>
+            </div>
+            
+            <button onclick="confirmarCantidadAjustada()" class="btn-cta" style="width: 100%;">
+                Confirmar Cantidad
+            </button>
+        </div>
+    `;
+    
+    modalContent.innerHTML = html;
+}
+
+function ajustarCantidadTemp(delta) {
+    const input = document.getElementById('cantidadAjustada');
+    const newVal = Math.max(0, parseInt(input.value) + delta);
+    input.value = newVal;
+}
+
+function confirmarCantidadAjustada() {
+    const cantidad = parseInt(document.getElementById('cantidadAjustada').value);
+    verificarProducto(cantidad, false);
+}
+        function mostrarPantallaFirma() {
+    const modal = document.getElementById('shareModal');
+    const modalContent = modal.querySelector('.modal-content');
+    
+    const totalOK = recepcionActual.verificados.filter(v => v.correcto).length;
+    const totalDiff = recepcionActual.verificados.filter(v => !v.correcto).length;
+    
+    let html = `
+        <h3 style="text-align: center; margin-bottom: 20px;">Firma de Recepción</h3>
+        
+        <div style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px;">
+                <span style="color: #64748b;">Productos OK:</span>
+                <span style="color: #059669; font-weight: 700;">✓ ${totalOK}</span>
+            </div>
+            <div style="display: flex; justify-content: space-between;">
+                <span style="color: #64748b;">Con diferencias:</span>
+                <span style="color: #dc2626; font-weight: 700;">⚠️ ${totalDiff}</span>
+            </div>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-size: 14px; font-weight: 600; color: #1e293b; margin-bottom: 8px;">Firme aquí:</label>
+            <canvas id="signatureCanvas" style="width: 100%; height: 200px; border: 2px solid #e2e8f0; border-radius: 8px; background: white; touch-action: none;"></canvas>
+            <button onclick="limpiarFirma()" style="margin-top: 10px; padding: 8px 16px; border: 1px solid #e2e8f0; background: white; border-radius: 6px; font-size: 13px; cursor: pointer;">
+                🔄 Limpiar Firma
+            </button>
+        </div>
+        
+        <button onclick="finalizarRecepcionConFirma()" class="btn-cta" style="width: 100%;">
+            📄 Generar PDF Firmado
+        </button>
+    `;
+    
+    modalContent.innerHTML = html;
+    
+    // Inicializar canvas para firma
+    setTimeout(() => {
+        const canvas = document.getElementById('signatureCanvas');
+        const ctx = canvas.getContext('2d');
+        
+        // Ajustar tamaño del canvas
+        canvas.width = canvas.offsetWidth;
+        canvas.height = 200;
+        
+        let drawing = false;
+        
+        const startDrawing = (e) => {
+            drawing = true;
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+            ctx.beginPath();
+            ctx.moveTo(x, y);
+        };
+        
+        const draw = (e) => {
+            if (!drawing) return;
+            e.preventDefault();
+            const rect = canvas.getBoundingClientRect();
+            const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+            const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+            ctx.lineTo(x, y);
+            ctx.strokeStyle = '#1e293b';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.stroke();
+        };
+        
+        const stopDrawing = () => {
+            drawing = false;
+        };
+        
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('touchstart', startDrawing);
+        canvas.addEventListener('touchmove', draw);
+        canvas.addEventListener('touchend', stopDrawing);
+        
+        window.limpiarFirma = () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        };
+    }, 100);
+}
+        async function finalizarRecepcionConFirma() {
+    const canvas = document.getElementById('signatureCanvas');
+    const firmaDataURL = canvas.toDataURL('image/png');
+    
+    // Cargar jsPDF
+    if (!window.jspdf) {
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+        await new Promise(resolve => {
+            script.onload = resolve;
+            document.head.appendChild(script);
+        });
+    }
+    
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    
+    // Header
+    doc.setFontSize(20);
+    doc.setFont('helvetica', 'bold');
+    doc.text('RECEPCIÓN DE MERCADERÍA', 105, 20, { align: 'center' });
+    
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'normal');
+    doc.text('COQUINARIA', 105, 28, { align: 'center' });
+    
+    // Nº Guía
+    doc.setFillColor(254, 226, 226);
+    doc.rect(20, 35, 170, 15, 'F');
+    doc.setFontSize(12);
+    doc.setFont('helvetica', 'bold');
+    doc.text(`Nº GUÍA: ${recepcionActual.numeroGuia}`, 105, 44, { align: 'center' });
+    
+    // Info
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, 20, 58);
+    doc.text(`Hora: ${new Date().toLocaleTimeString('es-CL')}`, 20, 63);
+    
+    // Tabla de productos
+    let y = 75;
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PRODUCTOS RECIBIDOS', 20, y);
+    
+    y += 8;
+    recepcionActual.verificados.forEach((item, i) => {
+        if (y > 250) {
+            doc.addPage();
+            y = 20;
+        }
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        
+        const estado = item.correcto ? '✓ OK' : '⚠️ DIFERENCIA';
+        const color = item.correcto ? [5, 150, 105] : [220, 38, 38];
+        
+        doc.text(`${i + 1}. ${item.descripcion}`, 20, y);
+        doc.text(`SKU: ${item.sku}`, 25, y + 5);
+        doc.text(`Guía: ${item.cantidadGuia} | Recibido: ${item.cantidadRecibida}`, 25, y + 10);
+        
+        doc.setTextColor(...color);
+        doc.text(estado, 170, y + 5);
+        doc.setTextColor(0, 0, 0);
+        
+        y += 20;
+    });
+    
+    // Firma
+    y += 10;
+    if (y > 240) {
+        doc.addPage();
+        y = 20;
+    }
+    
+    doc.setFont('helvetica', 'bold');
+    doc.text('FIRMA DE RECEPCIÓN:', 20, y);
+    doc.addImage(firmaDataURL, 'PNG', 20, y + 5, 80, 30);
+    
+    // Guardar
+    const fileName = `Recepcion_${recepcionActual.numeroGuia}_${new Date().toISOString().split('T')[0]}.pdf`;
+    doc.save(fileName);
+    
+    showToast('✅ PDF generado correctamente');
+    
+    // Opción de enviar por WhatsApp
+    setTimeout(() => {
+        if (confirm('¿Desea enviar el PDF por WhatsApp?')) {
+            const pdfBlob = doc.output('blob');
+            // Aquí implementarías el envío real del PDF
+            showToast('📱 Abriendo WhatsApp...');
+            window.open('https://wa.me/?text=' + encodeURIComponent(`Recepción completada: Guía ${recepcionActual.numeroGuia}`));
+        }
+        
+        closeShareModal();
+        renderProducts();
+    }, 500);
+}
     </script>
 </body>
 </html>
