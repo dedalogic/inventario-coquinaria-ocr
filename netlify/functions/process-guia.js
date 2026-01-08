@@ -117,122 +117,66 @@ function procesarTextoGuia(texto) {
     fechaEmision = fechaMatch[1];
   }
 
-  // ===== DETECTAR PRODUCTOS =====
-  // Estrategia: Buscar índices de las palabras clave y extraer valores
+  // ===== DETECTAR PRODUCTOS (MÚLTIPLES) =====
+  // Buscar TODOS los códigos de 4-5 dígitos que cumplan criterios
+  const codigosEncontrados = new Set(); // Evitar duplicados
   
-  let indiceCodigo = -1;
-  let indiceDescripcion = -1;
-  let indiceCantidad = -1;
-  
-  // Encontrar los índices de los encabezados de columna
   for (let i = 0; i < lineas.length; i++) {
     const linea = lineas[i];
     
-    if (linea.match(/^C[OÓ]DIGO$/i)) {
-      indiceCodigo = i;
-    }
-    if (linea.match(/^DESCRIPCI[OÓ]N$/i)) {
-      indiceDescripcion = i;
-    }
-    if (linea.match(/^CANTIDAD$/i)) {
-      indiceCantidad = i;
-    }
-  }
-
-  // Si encontramos los 3 encabezados, extraer los valores
-  if (indiceCodigo > 0 && indiceDescripcion > 0 && indiceCantidad > 0) {
-    // Buscar el código (siguiente línea después de "CÓDIGO")
-    let codigo = '';
-    for (let i = indiceCodigo + 1; i < lineas.length; i++) {
-      if (lineas[i].match(/^\d{4,5}$/)) {
-        codigo = lineas[i];
-        break;
+    // Buscar códigos de 4-5 dígitos que estén solos en una línea
+    if (linea.match(/^\d{4,5}$/)) {
+      const codigo = linea;
+      
+      // Evitar duplicados
+      if (codigosEncontrados.has(codigo)) {
+        continue;
       }
-    }
-    
-    // Buscar la descripción (siguiente línea después de "DESCRIPCIÓN")
-    let descripcion = '';
-    for (let i = indiceDescripcion + 1; i < lineas.length; i++) {
-      const linea = lineas[i];
-      // La descripción es texto, no números puros
-      if (linea.length > 3 && !linea.match(/^[\d.,]+$/) && !linea.match(/^(Ciudad|Comuna|Puerto|Nave|Nombre|Rut|Patente)/i)) {
-        descripcion = linea;
-        break;
-      }
-    }
-    
-    // Buscar la cantidad (siguiente línea después de "CANTIDAD")
-    let cantidad = 0;
-    for (let i = indiceCantidad + 1; i < Math.min(indiceCantidad + 5, lineas.length); i++) {
-      const linea = lineas[i];
-      if (linea.match(/^\d{1,4}$/)) {
-        const num = parseInt(linea);
-        if (num > 0 && num < 10000) {
-          cantidad = num;
+      
+      let descripcion = '';
+      let cantidad = 0;
+      
+      // Buscar descripción en las siguientes líneas (texto largo)
+      for (let j = i + 1; j < Math.min(i + 10, lineas.length); j++) {
+        const siguienteLinea = lineas[j];
+        
+        // La descripción debe ser texto (no números puros) y no palabras clave
+        if (siguienteLinea.length > 10 && 
+            !siguienteLinea.match(/^[\d.,]+$/) && 
+            !siguienteLinea.match(/CÓDIGO|DESCRIPCI|CANTIDAD|Ciudad|Comuna|Puerto|Nave|Nombre|Rut|Patente|KITCHEN|KENNEDY|Telefon|RUT|DIRECCI|EMISI/i)) {
+          descripcion = siguienteLinea;
           break;
         }
       }
-    }
-    
-    // Si encontramos los 3 valores, agregar el producto
-    if (codigo && descripcion && cantidad > 0) {
-      productos.push({
-        codigo: codigo,
-        descripcion: descripcion,
-        cantidad: cantidad
-      });
-    }
-  }
-
-  // MÉTODO ALTERNATIVO: Si no funcionó el anterior, buscar por proximidad
-  if (productos.length === 0) {
-    // Buscar códigos de 4-5 dígitos que estén solos en una línea
-    for (let i = 0; i < lineas.length; i++) {
-      const linea = lineas[i];
       
-      if (linea.match(/^\d{4,5}$/)) {
-        const codigo = linea;
-        let descripcion = '';
-        let cantidad = 0;
+      // Buscar cantidad después de la descripción (número entre 1-9999)
+      for (let j = i + 1; j < Math.min(i + 15, lineas.length); j++) {
+        const siguienteLinea = lineas[j];
         
-        // Buscar descripción en las siguientes líneas (texto largo)
-        for (let j = i + 1; j < Math.min(i + 10, lineas.length); j++) {
-          const siguienteLinea = lineas[j];
-          
-          if (siguienteLinea.length > 10 && !siguienteLinea.match(/^[\d.,]+$/) && !siguienteLinea.match(/CÓDIGO|DESCRIPCI|CANTIDAD|Ciudad|Comuna/i)) {
-            descripcion = siguienteLinea;
+        if (siguienteLinea.match(/^\d{1,4}$/)) {
+          const num = parseInt(siguienteLinea);
+          if (num > 0 && num < 10000) {
+            cantidad = num;
             break;
           }
         }
+      }
+      
+      // Si encontramos código + descripción + cantidad, agregarlo
+      if (codigo && descripcion && cantidad > 0) {
+        productos.push({
+          codigo: codigo,
+          descripcion: descripcion,
+          cantidad: cantidad
+        });
+        codigosEncontrados.add(codigo);
         
-        // Buscar cantidad después de la descripción (número entre 1-999)
-        for (let j = i + 1; j < Math.min(i + 15, lineas.length); j++) {
-          const siguienteLinea = lineas[j];
-          
-          if (siguienteLinea.match(/^\d{1,3}$/)) {
-            const num = parseInt(siguienteLinea);
-            if (num > 0 && num < 1000) {
-              cantidad = num;
-              break;
-            }
-          }
-        }
-        
-        // Si encontramos código + descripción + cantidad, agregarlo
-        if (codigo && descripcion && cantidad > 0) {
-          // Verificar que no sea una dirección o teléfono
-          if (!descripcion.match(/KITCHEN|KENNEDY|Telefon|RUT|DIRECCI/i)) {
-            productos.push({
-              codigo: codigo,
-              descripcion: descripcion,
-              cantidad: cantidad
-            });
-            break; // Solo tomar el primer producto encontrado
-          }
-        }
+        console.log(`✅ Producto detectado: ${codigo} - ${descripcion.substring(0, 30)}... (${cantidad})`);
       }
     }
   }
+
+  console.log(`🎯 Total productos encontrados: ${productos.length}`);
 
   return {
     numeroGuia,
