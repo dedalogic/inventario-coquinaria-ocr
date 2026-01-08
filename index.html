@@ -1128,60 +1128,200 @@ function renderFilters() {
             switchMainView('stock');
         }
 
-        function triggerCamera() { document.getElementById('scanInput').click(); }
+  // ============================================
+// ESCANEO EN 2 PASOS: GUÍA → PRODUCTOS
+// ============================================
+let escaneoActual = {
+    paso: 1, // 1 = Número de guía, 2 = Productos
+    numeroGuia: '',
+    productosDetectados: []
+};
 
-        // ============================================
-        // OCR SCAN HANDLER
-        // ============================================
-        async function handleScan(input) {
-            if (!input.files || !input.files[0]) return;
+function triggerCamera() {
+    escaneoActual = { paso: 1, numeroGuia: '', productosDetectados: [] };
+    mostrarInstruccionEscaneo();
+}
+
+function mostrarInstruccionEscaneo() {
+    const modal = document.getElementById('shareModal');
+    const modalContent = modal.querySelector('.modal-content');
+    
+    const paso = escaneoActual.paso;
+    
+    if (paso === 1) {
+        modalContent.innerHTML = `
+            <div style="text-align: center; padding: 30px 20px;">
+                <div style="font-size: 48px; margin-bottom: 15px; animation: pulse 2s infinite;">📋</div>
+                <h3 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 10px;">Ayudemos a la IA a leer mejor</h3>
+                <p style="font-size: 15px; color: #64748b; margin-bottom: 25px; line-height: 1.6;">
+                    Primero, enfoca <strong>solo el número de la guía</strong> para detectarlo correctamente
+                </p>
+                
+                <div style="background: #fffbf0; border: 2px dashed #f59e0b; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
+                    <div style="font-size: 14px; color: #92400e; font-weight: 600; margin-bottom: 8px;">📸 PASO 1 de 2</div>
+                    <div style="font-size: 13px; color: #78350f;">Acerca el teléfono al <strong>número de guía</strong></div>
+                </div>
+                
+                <button class="btn-cta" onclick="abrirCamaraPaso1()" style="width: 100%;">
+                    📷 Escanear Número de Guía
+                </button>
+                <button class="btn-cta secondary" onclick="closeShareModal()" style="width: 100%; margin-top: 10px;">
+                    Cancelar
+                </button>
+            </div>
             
-            const file = input.files[0];
+            <style>
+                @keyframes pulse {
+                    0%, 100% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.1); opacity: 0.8; }
+                }
+            </style>
+        `;
+    } else {
+        modalContent.innerHTML = `
+            <div style="text-align: center; padding: 30px 20px;">
+                <div style="font-size: 48px; margin-bottom: 15px; animation: pulse 2s infinite;">📦</div>
+                <h3 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 10px;">¡Perfecto!</h3>
+                <p style="font-size: 15px; color: #64748b; margin-bottom: 15px; line-height: 1.6;">
+                    Guía detectada: <strong style="color: #059669;">${escaneoActual.numeroGuia}</strong>
+                </p>
+                <p style="font-size: 15px; color: #64748b; margin-bottom: 25px; line-height: 1.6;">
+                    Ahora, enfoca la <strong>lista de productos completa</strong> (códigos, nombres y cantidades)
+                </p>
+                
+                <div style="background: #f0fdf4; border: 2px dashed #059669; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
+                    <div style="font-size: 14px; color: #166534; font-weight: 600; margin-bottom: 8px;">📸 PASO 2 de 2</div>
+                    <div style="font-size: 13px; color: #15803d;">Muestra todos los productos de la guía</div>
+                </div>
+                
+                <button class="btn-cta" onclick="abrirCamaraPaso2()" style="width: 100%;">
+                    📷 Escanear Productos
+                </button>
+                <button class="btn-cta secondary" onclick="closeShareModal()" style="width: 100%; margin-top: 10px;">
+                    Cancelar
+                </button>
+            </div>
             
-            if (file.size > 10 * 1024 * 1024) {
-                showToast("⚠️ Imagen muy grande. Máximo 10MB.");
-                return;
+            <style>
+                @keyframes pulse {
+                    0%, 100% { transform: scale(1); opacity: 1; }
+                    50% { transform: scale(1.1); opacity: 0.8; }
+                }
+            </style>
+        `;
+    }
+    
+    modal.classList.add('active');
+}
+
+function abrirCamaraPaso1() {
+    closeShareModal();
+    document.getElementById('scanInput').click();
+}
+
+function abrirCamaraPaso2() {
+    closeShareModal();
+    document.getElementById('scanInput').click();
+}
+
+// ============================================
+// MODIFICAR handleScan PARA 2 PASOS
+// ============================================
+async function handleScan(input) {
+    if (!input.files || !input.files[0]) return;
+    
+    const file = input.files[0];
+    
+    if (file.size > 10 * 1024 * 1024) {
+        showToast("⚠️ Imagen muy grande. Máximo 10MB.");
+        return;
+    }
+    
+    const paso = escaneoActual.paso;
+    
+    if (paso === 1) {
+        showToast("📸 Detectando número de guía...");
+    } else {
+        showToast("📸 Detectando productos...");
+    }
+    
+    try {
+        await new Promise(resolve => setTimeout(resolve, 300));
+        showToast("🔄 Optimizando imagen...");
+        
+        const compressedImage = await compressImage(file);
+        showToast("🚀 Enviando a Google Vision AI...");
+        
+        const response = await fetch('/.netlify/functions/process-guia', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: compressedImage })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error procesando imagen');
+        }
+        
+        showToast("🔍 Analizando texto...");
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'No se pudo procesar la imagen');
+        }
+        
+        if (paso === 1) {
+            // PASO 1: Solo guardar número de guía
+            if (data.numeroGuia && data.numeroGuia !== 'SIN_NUMERO') {
+                escaneoActual.numeroGuia = data.numeroGuia;
+                escaneoActual.paso = 2;
+                showToast("✅ Guía detectada: " + data.numeroGuia);
+                setTimeout(() => mostrarInstruccionEscaneo(), 1000);
+            } else {
+                showToast("❌ No se detectó número de guía. Intenta de nuevo.");
+                setTimeout(() => mostrarInstruccionEscaneo(), 1500);
             }
-            
-            showToast("📸 Capturando imagen...");
-            
-            try {
-                await new Promise(resolve => setTimeout(resolve, 300));
-                showToast("🔄 Optimizando imagen...");
-                
-                const compressedImage = await compressImage(file);
-                
-                showToast("🚀 Enviando a Google Vision AI...");
-                
-                const response = await fetch('/.netlify/functions/process-guia', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: compressedImage })
-                });
-                
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(errorData.error || 'Error procesando imagen');
-                }
-                
-                showToast("🔍 Analizando texto...");
-                
-                const data = await response.json();
-                
-                if (!data.success) {
-                    throw new Error(data.error || 'No se pudo procesar la guía');
-                }
-                
-                showToast("✅ Importando productos...");
-                
-                procesarGuiaOCR(data);
-                
-            } catch (error) {
-                console.error('Error:', error);
-                showToast("❌ Error: " + error.message);
+        } else {
+            // PASO 2: Guardar productos y continuar
+            if (data.productos && data.productos.length > 0) {
+                escaneoActual.productosDetectados = data.productos;
+                showToast(`✅ ${data.productos.length} productos detectados`);
+                procesarGuiaCompleta();
+            } else {
+                showToast("❌ No se detectaron productos. Intenta de nuevo.");
+                setTimeout(() => mostrarInstruccionEscaneo(), 1500);
             }
         }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showToast("❌ Error: " + error.message);
+        setTimeout(() => mostrarInstruccionEscaneo(), 1500);
+    }
+}
 
+function procesarGuiaCompleta() {
+    // Combinar número de guía + productos
+    const dataCompleta = {
+        numeroGuia: escaneoActual.numeroGuia,
+        productos: escaneoActual.productosDetectados
+    };
+    
+    // Aplicar a dataReception
+    currentDocNumber = dataCompleta.numeroGuia;
+    const docInput = document.getElementById('docNumberInput');
+    if (docInput) docInput.value = dataCompleta.numeroGuia;
+    
+    dataCompleta.productos.forEach(prod => {
+        dataReception[prod.codigo] = prod.cantidad;
+    });
+    
+    saveData();
+    renderProducts();
+    
+    // Mostrar resumen
+    mostrarResumenGuia(dataCompleta, dataCompleta.productos.length, []);
+}
         async function compressImage(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -2424,15 +2564,11 @@ function mostrarPantallaFirma() {
     
     // ========== HEADER ==========
     doc.setFillColor(74, 4, 4);
-    doc.rect(0, 0, 210, 30, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFontSize(22);
-    doc.setFont('helvetica', 'bold');
-    doc.text('🍷 COQUINARIA', 105, 15, { align: 'center' });
-    doc.setFontSize(12);
-    doc.setFont('helvetica', 'normal');
-    doc.text('RECEPCIÓN DE MERCADERÍA', 105, 23, { align: 'center' });
-    
+doc.rect(0, 0, 210, 25, 'F');
+doc.setTextColor(255, 255, 255);
+doc.setFontSize(24);
+doc.setFont('inter', 'bold');
+doc.text('COQUINARIA', 105, 16, { align: 'center' });
     // ========== INFO DOCUMENTO ==========
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(11);
