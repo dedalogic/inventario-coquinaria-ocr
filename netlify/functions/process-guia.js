@@ -117,9 +117,9 @@ function procesarTextoGuia(texto) {
     fechaEmision = fechaMatch[1];
   }
 
-  // ===== DETECTAR PRODUCTOS (MÚLTIPLES) =====
-  // Buscar TODOS los códigos de 4-5 dígitos que cumplan criterios
-  const codigosEncontrados = new Set(); // Evitar duplicados
+  // ===== DETECTAR PRODUCTOS (SIN REPETICIONES) =====
+  const codigosEncontrados = new Set();
+  const descripcionesEncontradas = new Set(); // 🆕 Evitar descripciones duplicadas
   
   for (let i = 0; i < lineas.length; i++) {
     const linea = lineas[i];
@@ -128,7 +128,7 @@ function procesarTextoGuia(texto) {
     if (linea.match(/^\d{4,5}$/)) {
       const codigo = linea;
       
-      // Evitar duplicados
+      // Evitar códigos duplicados
       if (codigosEncontrados.has(codigo)) {
         continue;
       }
@@ -144,8 +144,12 @@ function procesarTextoGuia(texto) {
         if (siguienteLinea.length > 10 && 
             !siguienteLinea.match(/^[\d.,]+$/) && 
             !siguienteLinea.match(/CÓDIGO|DESCRIPCI|CANTIDAD|Ciudad|Comuna|Puerto|Nave|Nombre|Rut|Patente|KITCHEN|KENNEDY|Telefon|RUT|DIRECCI|EMISI/i)) {
-          descripcion = siguienteLinea;
-          break;
+          
+          // 🆕 EVITAR DESCRIPCIONES REPETIDAS
+          if (!descripcionesEncontradas.has(siguienteLinea)) {
+            descripcion = siguienteLinea;
+            break;
+          }
         }
       }
       
@@ -170,6 +174,7 @@ function procesarTextoGuia(texto) {
           cantidad: cantidad
         });
         codigosEncontrados.add(codigo);
+        descripcionesEncontradas.add(descripcion); // 🆕 Marcar descripción como usada
         
         console.log(`✅ Producto detectado: ${codigo} - ${descripcion.substring(0, 30)}... (${cantidad})`);
       }
