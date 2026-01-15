@@ -1128,17 +1128,17 @@ function renderFilters() {
             switchMainView('stock');
         }
 
-// ============================================
-// ESCANEO EN 2 FOTOS: GUÍA → PRODUCTOS
+  // ============================================
+// ESCANEO EN 2 PASOS: GUÍA → PRODUCTOS
 // ============================================
 let escaneoActual = {
     paso: 1, // 1 = Número de guía, 2 = Productos
-    fotoGuia: null,
-    fotoProductos: null
+    numeroGuia: '',
+    productosDetectados: []
 };
 
 function triggerCamera() {
-    escaneoActual = { paso: 1, fotoGuia: null, fotoProductos: null };
+    escaneoActual = { paso: 1, numeroGuia: '', productosDetectados: [] };
     mostrarInstruccionEscaneo();
 }
 
@@ -1154,7 +1154,7 @@ function mostrarInstruccionEscaneo() {
                 <div style="font-size: 48px; margin-bottom: 15px; animation: pulse 2s infinite;">📋</div>
                 <h3 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 10px;">Ayudemos a la IA a leer mejor</h3>
                 <p style="font-size: 15px; color: #64748b; margin-bottom: 25px; line-height: 1.6;">
-                    Primero, toma una foto clara del <strong>número de la guía</strong>
+                    Primero, enfoca <strong>solo el número de la guía</strong> para detectarlo correctamente
                 </p>
                 
                 <div style="background: #fffbf0; border: 2px dashed #f59e0b; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
@@ -1163,7 +1163,7 @@ function mostrarInstruccionEscaneo() {
                 </div>
                 
                 <button class="btn-cta" onclick="abrirCamaraPaso1()" style="width: 100%;">
-                    📷 Tomar Foto del Número
+                    📷 Escanear Número de Guía
                 </button>
                 <button class="btn-cta secondary" onclick="closeShareModal()" style="width: 100%; margin-top: 10px;">
                     Cancelar
@@ -1183,19 +1183,19 @@ function mostrarInstruccionEscaneo() {
                 <div style="font-size: 48px; margin-bottom: 15px; animation: pulse 2s infinite;">📦</div>
                 <h3 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 10px;">¡Perfecto!</h3>
                 <p style="font-size: 15px; color: #64748b; margin-bottom: 15px; line-height: 1.6;">
-                    Foto del número guardada ✓
+                    Guía detectada: <strong style="color: #059669;">${escaneoActual.numeroGuia}</strong>
                 </p>
                 <p style="font-size: 15px; color: #64748b; margin-bottom: 25px; line-height: 1.6;">
-                    Ahora, toma una foto de la <strong>lista completa de productos</strong>
+                    Ahora, enfoca la <strong>lista de productos completa</strong> (códigos, nombres y cantidades)
                 </p>
                 
                 <div style="background: #f0fdf4; border: 2px dashed #059669; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
                     <div style="font-size: 14px; color: #166534; font-weight: 600; margin-bottom: 8px;">📸 PASO 2 de 2</div>
-                    <div style="font-size: 13px; color: #15803d;">Muestra todos los productos (SKU, nombres y cantidades)</div>
+                    <div style="font-size: 13px; color: #15803d;">Muestra todos los productos de la guía</div>
                 </div>
                 
                 <button class="btn-cta" onclick="abrirCamaraPaso2()" style="width: 100%;">
-                    📷 Tomar Foto de Productos
+                    📷 Escanear Productos
                 </button>
                 <button class="btn-cta secondary" onclick="closeShareModal()" style="width: 100%; margin-top: 10px;">
                     Cancelar
@@ -1225,7 +1225,7 @@ function abrirCamaraPaso2() {
 }
 
 // ============================================
-// MODIFICAR handleScan PARA 2 FOTOS
+// MODIFICAR handleScan PARA 2 PASOS
 // ============================================
 async function handleScan(input) {
     if (!input.files || !input.files[0]) return;
@@ -1239,24 +1239,58 @@ async function handleScan(input) {
     
     const paso = escaneoActual.paso;
     
+    if (paso === 1) {
+        showToast("📸 Detectando número de guía...");
+    } else {
+        showToast("📸 Detectando productos...");
+    }
+    
     try {
-        showToast(paso === 1 ? "📸 Guardando foto del número..." : "📸 Guardando foto de productos...");
-        
         await new Promise(resolve => setTimeout(resolve, 300));
+        showToast("🔄 Optimizando imagen...");
         
         const compressedImage = await compressImage(file);
+        showToast("🚀 Enviando a Google Vision AI...");
+        
+        const response = await fetch('/.netlify/functions/process-guia', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: compressedImage })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error procesando imagen');
+        }
+        
+        showToast("🔍 Analizando texto...");
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'No se pudo procesar la imagen');
+        }
         
         if (paso === 1) {
-            // PASO 1: Guardar foto de la guía
-            escaneoActual.fotoGuia = compressedImage;
-            escaneoActual.paso = 2;
-            showToast("✅ Foto del número guardada");
-            setTimeout(() => mostrarInstruccionEscaneo(), 1000);
+            // PASO 1: Solo guardar número de guía
+            if (data.numeroGuia && data.numeroGuia !== 'SIN_NUMERO') {
+                escaneoActual.numeroGuia = data.numeroGuia;
+                escaneoActual.paso = 2;
+                showToast("✅ Guía detectada: " + data.numeroGuia);
+                setTimeout(() => mostrarInstruccionEscaneo(), 1000);
+            } else {
+                showToast("❌ No se detectó número de guía. Intenta de nuevo.");
+                setTimeout(() => mostrarInstruccionEscaneo(), 1500);
+            }
         } else {
-            // PASO 2: Guardar foto de productos y ENVIAR TODO
-            escaneoActual.fotoProductos = compressedImage;
-            showToast("✅ Foto de productos guardada");
-            await enviarAmbiasFotos();
+            // PASO 2: Guardar productos y continuar
+            if (data.productos && data.productos.length > 0) {
+                escaneoActual.productosDetectados = data.productos;
+                showToast(`✅ ${data.productos.length} productos detectados`);
+                procesarGuiaCompleta();
+            } else {
+                showToast("❌ No se detectaron productos. Intenta de nuevo.");
+                setTimeout(() => mostrarInstruccionEscaneo(), 1500);
+            }
         }
         
     } catch (error) {
@@ -1264,113 +1298,30 @@ async function handleScan(input) {
         showToast("❌ Error: " + error.message);
         setTimeout(() => mostrarInstruccionEscaneo(), 1500);
     }
-    
-    // Limpiar input
-    input.value = '';
 }
 
-// ============================================
-// ENVIAR AMBAS FOTOS JUNTAS
-// ============================================
-async function enviarAmbiasFotos() {
-    showToast("🚀 Enviando a Google Vision AI...");
+function procesarGuiaCompleta() {
+    // Combinar número de guía + productos
+    const dataCompleta = {
+        numeroGuia: escaneoActual.numeroGuia,
+        productos: escaneoActual.productosDetectados
+    };
     
-    try {
-        // Procesar foto de la guía (solo número)
-        const responseGuia = await fetch('/.netlify/functions/process-guia', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: escaneoActual.fotoGuia })
-        });
-        
-        if (!responseGuia.ok) {
-            throw new Error('Error al procesar número de guía');
-        }
-        
-        const dataGuia = await responseGuia.json();
-        
-        if (!dataGuia.success || !dataGuia.numeroGuia || dataGuia.numeroGuia === 'SIN_NUMERO') {
-            showToast("❌ No se detectó el número de guía");
-            setTimeout(() => {
-                escaneoActual = { paso: 1, fotoGuia: null, fotoProductos: null };
-                mostrarInstruccionEscaneo();
-            }, 1500);
-            return;
-        }
-        
-        showToast(`✓ Guía: ${dataGuia.numeroGuia} | Procesando productos...`);
-        
-        // Procesar foto de productos
-        const responseProductos = await fetch('/.netlify/functions/process-guia', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: escaneoActual.fotoProductos })
-        });
-        
-        if (!responseProductos.ok) {
-            throw new Error('Error al procesar productos');
-        }
-        
-        const dataProductos = await responseProductos.json();
-        
-        if (!dataProductos.success || !dataProductos.productos || dataProductos.productos.length === 0) {
-            showToast("❌ No se detectaron productos");
-            setTimeout(() => {
-                escaneoActual = { paso: 1, fotoGuia: null, fotoProductos: null };
-                mostrarInstruccionEscaneo();
-            }, 1500);
-            return;
-        }
-        
-        showToast(`✅ ${dataProductos.productos.length} productos detectados`);
-        
-        // Combinar resultados
-        const dataCompleta = {
-            numeroGuia: dataGuia.numeroGuia,
-            productos: dataProductos.productos
-        };
-        
-        // Aplicar a dataReception
-        currentDocNumber = dataCompleta.numeroGuia;
-        const docInput = document.getElementById('docNumberInput');
-        if (docInput) docInput.value = dataCompleta.numeroGuia;
-        
-        dataCompleta.productos.forEach(prod => {
-            dataReception[prod.codigo] = prod.cantidad;
-        });
-        
-        saveData();
-        renderProducts();
-        
-        // Mostrar resumen final
-        setTimeout(() => {
-            mostrarResumenGuia(dataCompleta, dataCompleta.productos.length, []);
-        }, 500);
-        
-    } catch (error) {
-        console.error('Error:', error);
-        showToast("❌ Error: " + error.message);
-        setTimeout(() => {
-            escaneoActual = { paso: 1, fotoGuia: null, fotoProductos: null };
-            mostrarInstruccionEscaneo();
-        }, 1500);
-    }
+    // Aplicar a dataReception
+    currentDocNumber = dataCompleta.numeroGuia;
+    const docInput = document.getElementById('docNumberInput');
+    if (docInput) docInput.value = dataCompleta.numeroGuia;
+    
+    dataCompleta.productos.forEach(prod => {
+        dataReception[prod.codigo] = prod.cantidad;
+    });
+    
+    saveData();
+    renderProducts();
+    
+    // Mostrar resumen
+    mostrarResumenGuia(dataCompleta, dataCompleta.productos.length, []);
 }
-```
-
----
-
-## 📍 **RESUMEN VISUAL:**
-```
-Busca esto:
-// ============================================
-// ESCANEO EN 2 PASOS: GUÍA → PRODUCTOS
-// ============================================
-
-Borra TODO hasta ANTES de:
-async function compressImage(file) {
-
-Pega el código nuevo que te di arriba
         async function compressImage(file) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
