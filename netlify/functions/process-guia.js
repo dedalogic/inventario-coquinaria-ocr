@@ -1,10 +1,23 @@
-// netlify/functions/process-guia.js
 const { ImageAnnotatorClient } = require('@google-cloud/vision');
+
+let visionClient;
+
+const getVisionClient = () => {
+  if (!visionClient) {
+    if (!process.env.GOOGLE_CREDENTIALS) {
+      throw new Error('GOOGLE_CREDENTIALS not configured');
+    }
+    const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+    visionClient = new ImageAnnotatorClient({ credentials });
+  }
+  return visionClient;
+};
 
 exports.handler = async (event) => {
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
+    'Access-Control-Allow-Methods': 'POST, OPTIONS',
     'Content-Type': 'application/json'
   };
 
@@ -27,29 +40,25 @@ exports.handler = async (event) => {
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'No image provided' })
-      };
-    }
-
-    if (!process.env.GOOGLE_CREDENTIALS) {
-      return {
-        statusCode: 500,
-        headers,
         body: JSON.stringify({ 
-          error: 'Google Vision API credentials not configured',
-          success: false 
+          success: false,
+          error: 'No image provided' 
         })
       };
     }
 
-    const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-    const client = new ImageAnnotatorClient({ credentials });
-
+    const client = getVisionClient();
     const base64Image = image.split(',')[1] || image;
 
-    const [result] = await client.textDetection({
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Vision API timeout')), 25000)
+    );
+
+    const visionPromise = client.textDetection({
       image: { content: base64Image }
     });
+
+    const [result] = await Promise.race([visionPromise, timeoutPromise]);
 
     const detections = result.textAnnotations;
     
@@ -65,7 +74,7 @@ exports.handler = async (event) => {
     }
 
     const fullText = detections[0].description;
-    const resultado = procesarTextoGuia(fullText);
+    const resultado = procesarGuiaKitchenCenter(fullText);
 
     return {
       statusCode: 200,
@@ -79,114 +88,122 @@ exports.handler = async (event) => {
 
   } catch (error) {
     console.error('Error procesando imagen:', error);
+    
     return {
-      statusCode: 500,
+      statusCode: error.message.includes('timeout') ? 504 : 500,
       headers,
       body: JSON.stringify({
-        error: error.message || 'Error procesando la imagen',
-        success: false
+        success: false,
+        error: error.message || 'Error procesando la imagen'
       })
     };
   }
 };
 
-function procesarTextoGuia(texto) {
+function procesarGuiaKitchenCenter(texto) {
   const lineas = texto.split('\n').map(l => l.trim()).filter(l => l);
   
-  let numeroGuia = '';
+  let numeroFactura = '';
+  let fechaFactura = '';
+  let fechaOrden = '';
+  let folio = '';
+  let tienda = '';
   let productos = [];
-  let fechaEmision = '';
-
-  // ===== DETECTAR NÚMERO DE GUÍA =====
-  const patronesGuia = [
-    /N[°º]\s*(\d{10})/i,
-    /(\d{10})/
-  ];
-
-  for (const patron of patronesGuia) {
-    const match = texto.match(patron);
-    if (match) {
-      numeroGuia = match[1];
-      break;
-    }
-  }
-
-  // ===== DETECTAR FECHA =====
-  const fechaMatch = texto.match(/FECHA\s+EMISI[OÓ]N\s*[:\s]*(\d{2}\/\d{2}\/\d{4})/i);
-  if (fechaMatch) {
-    fechaEmision = fechaMatch[1];
-  }
-
-  // ===== DETECTAR PRODUCTOS (SIN REPETICIONES) =====
-  const codigosEncontrados = new Set();
-  const descripcionesEncontradas = new Set(); // 🆕 Evitar descripciones duplicadas
   
+  // DETECTAR NÚMERO DE FACTURA
+  const facturaMatch = texto.match(/Factura\s*[:\s]*(\d+)/i);
+  if (facturaMatch) {
+    numeroFactura = facturaMatch[1];
+  }
+  
+  // DETECTAR FECHA FACTURA
+  const fechaFacturaMatch = texto.match(/Fecha\s+Factura\s*[:\s]*(\d{2}\/\d{2}\/\d{4})/i);
+  if (fechaFacturaMatch) {
+    fechaFactura = fechaFacturaMatch[1];
+  }
+  
+  // DETECTAR FECHA ORDEN DE COMPRA
+  const fechaOrdenMatch = texto.match(/Fecha\s+Orden\s+de\s+Compra\s*[:\s]*(\d{2}\/\d{2}\/\d{4})/i);
+  if (fechaOrdenMatch) {
+    fechaOrden = fechaOrdenMatch[1];
+  }
+  
+  // DETECTAR FOLIO
+  const folioMatch = texto.match(/FOLIO\s*\[\s*(\d+)\s*\]/i);
+  if (folioMatch) {
+    folio = folioMatch[1];
+  }
+  
+  // DETECTAR TIENDA
+  const tiendaMatch = texto.match(/Tienda\s*[:\s]*(COQUINARIA[^\n]+)/i);
+  if (tiendaMatch) {
+    tienda = tiendaMatch[1];
+  }
+  
+  // DETECTAR PRODUCTOS
   for (let i = 0; i < lineas.length; i++) {
     const linea = lineas[i];
     
-    // Buscar códigos de 4-5 dígitos que estén solos en una línea
-    if (linea.match(/^\d{4,5}$/)) {
+    // Buscar código que empiece con 80 y tenga 5 dígitos
+    if (linea.match(/^80\d{3}$/)) {
       const codigo = linea;
-      
-      // Evitar códigos duplicados
-      if (codigosEncontrados.has(codigo)) {
-        continue;
-      }
-      
       let descripcion = '';
       let cantidad = 0;
+      let recepcion = 0;
+      let diferencia = 0;
       
-      // Buscar descripción en las siguientes líneas (texto largo)
-      for (let j = i + 1; j < Math.min(i + 10, lineas.length); j++) {
+      // Buscar descripción en las siguientes líneas
+      for (let j = i + 1; j < Math.min(i + 5, lineas.length); j++) {
         const siguienteLinea = lineas[j];
         
-        // La descripción debe ser texto (no números puros) y no palabras clave
         if (siguienteLinea.length > 10 && 
-            !siguienteLinea.match(/^[\d.,]+$/) && 
-            !siguienteLinea.match(/CÓDIGO|DESCRIPCI|CANTIDAD|Ciudad|Comuna|Puerto|Nave|Nombre|Rut|Patente|KITCHEN|KENNEDY|Telefon|RUT|DIRECCI|EMISI/i)) {
+            !siguienteLinea.match(/^[\d\s]+$/) &&
+            !siguienteLinea.match(/^80\d{3}/) &&
+            !siguienteLinea.match(/TOTAL|Proveedor|Dirección|Comuna|Ciudad|Factura|NETO|IVA/i)) {
           
-          // 🆕 EVITAR DESCRIPCIONES REPETIDAS
-          if (!descripcionesEncontradas.has(siguienteLinea)) {
-            descripcion = siguienteLinea;
-            break;
+          descripcion = siguienteLinea.replace(/80\d{3}\s*$/, '').trim();
+          
+          // Buscar números después de la descripción
+          for (let k = j + 1; k < Math.min(j + 5, lineas.length); k++) {
+            const numeroLinea = lineas[k];
+            
+            // Patrón: cantidad recepcion diferencia
+            const numMatch = numeroLinea.match(/^(\d+)\s+(\d+)\s+(\d+)/);
+            if (numMatch) {
+              cantidad = parseInt(numMatch[1]);
+              recepcion = parseInt(numMatch[2]);
+              diferencia = parseInt(numMatch[3]);
+              break;
+            }
           }
+          break;
         }
       }
       
-      // Buscar cantidad después de la descripción (número entre 1-9999)
-      for (let j = i + 1; j < Math.min(i + 15, lineas.length); j++) {
-        const siguienteLinea = lineas[j];
-        
-        if (siguienteLinea.match(/^\d{1,4}$/)) {
-          const num = parseInt(siguienteLinea);
-          if (num > 0 && num < 10000) {
-            cantidad = num;
-            break;
-          }
-        }
-      }
-      
-      // Si encontramos código + descripción + cantidad, agregarlo
       if (codigo && descripcion && cantidad > 0) {
         productos.push({
-          codigo: codigo,
-          descripcion: descripcion,
-          cantidad: cantidad
+          codigo,
+          descripcion,
+          cantidad,
+          recepcion,
+          diferencia
         });
-        codigosEncontrados.add(codigo);
-        descripcionesEncontradas.add(descripcion); // 🆕 Marcar descripción como usada
-        
-        console.log(`✅ Producto detectado: ${codigo} - ${descripcion.substring(0, 30)}... (${cantidad})`);
       }
     }
   }
-
-  console.log(`🎯 Total productos encontrados: ${productos.length}`);
-
+  
+  console.log(`🎯 Productos detectados: ${productos.length}`);
+  console.log(`📋 Factura: ${numeroFactura}, Folio: ${folio}`);
+  
   return {
-    numeroGuia,
-    fechaEmision,
+    numeroGuia: numeroFactura,
+    numeroFactura,
+    fechaFactura,
+    fechaOrden,
+    folio,
+    tienda,
     productos,
-    cantidadProductos: productos.length
+    cantidadProductos: productos.length,
+    totalUnidades: productos.reduce((sum, p) => sum + p.cantidad, 0)
   };
 }
