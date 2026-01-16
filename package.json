@@ -1,13 +1,12 @@
 {
-  "name": "inventario-coquinaria-ocr",
+  "name": "inventario-coquinaria",
   "version": "1.0.0",
-  "description": "Sistema OCR para guías de despacho",
+  "description": "Sistema de inventario Coquinaria",
   "scripts": {
-    "dev": "netlify dev",
-    "build": "echo 'No build needed'"
+    "dev": "netlify dev"
   },
   "dependencies": {
-    "@google-cloud/vision": "^4.3.2"
+    "@google-cloud/vision": "^4.0.0"
   },
   "devDependencies": {
     "netlify-cli": "^17.0.0"
