@@ -1137,9 +1137,74 @@ let escaneoActual = {
     productosDetectados: []
 };
 
-function triggerCamera() {
-    escaneoActual = { paso: 1, numeroGuia: '', productosDetectados: [] };
-    mostrarInstruccionEscaneo();
+async function handleScan(input) {
+    if (!input.files || !input.files[0]) return;
+    
+    const file = input.files[0];
+    
+    if (file.size > 10 * 1024 * 1024) {
+        showToast("⚠️ Imagen muy grande. Máximo 10MB.");
+        return;
+    }
+    
+    showToast("📸 Procesando guía Kitchen Center...");
+    
+    try {
+        const compressedImage = await compressImage(file);
+        showToast("🚀 Enviando a Google Vision AI...");
+        
+        const response = await fetch('/.netlify/functions/process-guia', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ image: compressedImage })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || 'Error procesando imagen');
+        }
+        
+        showToast("🔍 Analizando datos...");
+        const data = await response.json();
+        
+        if (!data.success) {
+            throw new Error(data.error || 'No se pudo procesar la imagen');
+        }
+        
+        if (data.productos && data.productos.length > 0) {
+            showToast(`✅ ${data.productos.length} productos detectados`);
+            
+            // Aplicar directamente a dataReception
+            currentDocNumber = data.numeroFactura;
+            const docInput = document.getElementById('docNumberInput');
+            if (docInput) docInput.value = data.numeroFactura;
+            
+            let productosImportados = 0;
+            let productosNoEncontrados = [];
+            
+            data.productos.forEach(prod => {
+                const productoExiste = rawProducts.find(p => p.sku === prod.codigo);
+                
+                if (productoExiste) {
+                    dataReception[prod.codigo] = prod.cantidad;
+                    productosImportados++;
+                } else {
+                    productosNoEncontrados.push(prod.codigo);
+                }
+            });
+            
+            saveData();
+            renderProducts();
+            mostrarResumenGuia(data, productosImportados, productosNoEncontrados);
+            
+        } else {
+            showToast("❌ No se detectaron productos. Intenta de nuevo.");
+        }
+        
+    } catch (error) {
+        console.error('Error:', error);
+        showToast("❌ Error: " + error.message);
+    }
 }
 
 function mostrarInstruccionEscaneo() {
@@ -1408,35 +1473,58 @@ function mostrarResumenGuia(data, importados, noEncontrados) {
     const modal = document.getElementById('shareModal');
     const modalContent = modal.querySelector('.modal-content');
     
-    const totalUnidades = data.productos.reduce((sum, p) => sum + p.cantidad, 0);
+    const totalUnidades = data.totalUnidades || data.productos.reduce((sum, p) => sum + p.cantidad, 0);
     
     let html = `
         <div style="text-align: center; padding: 20px 0;">
             <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
-            <h3 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 5px;">Guía Escaneada</h3>
-            <div style="font-size: 32px; font-weight: 800; color: #4a0404; letter-spacing: 2px; margin-bottom: 20px;">${data.numeroGuia || 'N/A'}</div>
+            <h3 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 5px;">Guía Kitchen Center Escaneada</h3>
+            <div style="font-size: 32px; font-weight: 800; color: #4a0404; letter-spacing: 2px; margin-bottom: 10px;">#${data.numeroFactura || 'N/A'}</div>
+            ${data.folio ? `<div style="font-size: 14px; color: #64748b; margin-bottom: 5px;">Folio: ${data.folio}</div>` : ''}
+            ${data.fechaFactura ? `<div style="font-size: 13px; color: #64748b;">Fecha: ${data.fechaFactura}</div>` : ''}
         </div>
         
         <div style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+            ${data.tienda ? `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
+                <span style="color: #64748b; font-size: 13px;">Tienda:</span>
+                <span style="font-weight: 600; color: #1e293b; font-size: 12px; text-align: right; max-width: 60%;">${data.tienda}</span>
+            </div>
+            ` : ''}
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
                 <span style="color: #64748b; font-size: 14px;">Productos detectados</span>
                 <span style="font-size: 24px; font-weight: 700; color: #059669;">${importados}</span>
             </div>
-            <div style="display: flex; justify-content: space-between; align-items: center;">
+            <div style="display: flex; justify-content: space-between;">
                 <span style="color: #64748b; font-size: 14px;">Total unidades</span>
                 <span style="font-size: 24px; font-weight: 700; color: #1e293b;">${totalUnidades}</span>
             </div>
         </div>
         
+        ${noEncontrados.length > 0 ? `
+        <div style="background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 6px; padding: 12px; margin-bottom: 15px;">
+            <div style="font-weight: 700; color: #991b1b; margin-bottom: 8px;">⚠️ Productos no encontrados en catálogo:</div>
+            ${noEncontrados.slice(0, 5).map(sku => `
+                <div style="font-size: 12px; color: #7f1d1d;">• SKU ${sku}</div>
+            `).join('')}
+            ${noEncontrados.length > 5 ? `<div style="font-size: 12px; color: #7f1d1d;">... y ${noEncontrados.length - 5} más</div>` : ''}
+        </div>
+        ` : ''}
+        
         <button class="btn-cta" onclick="iniciarRecepcionGuia()" style="width: 100%;">
-            Iniciar Recepción →
+            📋 Iniciar Recepción →
         </button>
     `;
     
-    // NUEVO: Guardar datos en variable global
+    // Guardar datos en variable global
     window.tempRecepcionData = {
         productos: data.productos,
-        numeroGuia: data.numeroGuia
+        numeroGuia: data.numeroFactura,
+        numeroFactura: data.numeroFactura,
+        fechaFactura: data.fechaFactura,
+        fechaOrden: data.fechaOrden,
+        folio: data.folio,
+        tienda: data.tienda
     };
     
     modalContent.innerHTML = html;
@@ -2526,7 +2614,7 @@ function mostrarPantallaFirma() {
     
     console.log('✅ Canvas de firma inicializado');
 }
-   async function finalizarRecepcionConFirma() {
+async function finalizarRecepcionConFirma() {
     const canvas = document.getElementById('signatureCanvas');
     
     if (!canvas) {
@@ -2534,7 +2622,6 @@ function mostrarPantallaFirma() {
         return;
     }
     
-    // Verificar que hay firma dibujada
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const hasDrawing = imageData.data.some(channel => channel !== 0);
@@ -2546,9 +2633,8 @@ function mostrarPantallaFirma() {
     
     const firmaDataURL = canvas.toDataURL('image/png');
     
-    showToast('📄 Generando PDF...');
+    showToast('📄 Generando PDF formato Kitchen Center...');
     
-    // Cargar jsPDF si no está
     if (!window.jspdf) {
         showToast('⏳ Cargando librería PDF...');
         const script = document.createElement('script');
@@ -2562,122 +2648,188 @@ function mostrarPantallaFirma() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
     
-    // ========== HEADER ==========
+    const data = window.tempRecepcionData || {};
+    
+    // HEADER KITCHEN CENTER
     doc.setFillColor(74, 4, 4);
-doc.rect(0, 0, 210, 25, 'F');
-doc.setTextColor(255, 255, 255);
-doc.setFontSize(24);
-doc.setFont('inter', 'bold');
-doc.text('COQUINARIA', 105, 16, { align: 'center' });
-    // ========== INFO DOCUMENTO ==========
+    doc.rect(0, 0, 210, 20, 'F');
+    doc.setTextColor(255, 255, 255);
+    doc.setFontSize(18);
+    doc.setFont('helvetica', 'bold');
+    doc.text('KITCHEN CENTER', 105, 13, { align: 'center' });
+    
+    // INFO DOCUMENTO
+    let y = 30;
     doc.setTextColor(0, 0, 0);
-    doc.setFontSize(11);
+    doc.setFontSize(16);
     doc.setFont('helvetica', 'bold');
-    doc.text(`Nº GUÍA: ${recepcionActual.numeroGuia}`, 20, 40);
-    doc.setFont('helvetica', 'normal');
+    doc.text(`INGRESO ORDEN DE COMPRA FOLIO [ ${data.folio || '---'} ]`, 105, y, { align: 'center' });
+    
+    y += 10;
     doc.setFontSize(10);
-    doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, 20, 47);
-    doc.text(`Hora: ${new Date().toLocaleTimeString('es-CL')}`, 20, 52);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Fecha Orden de Compra: ${data.fechaOrden || new Date().toLocaleDateString('es-CL')}`, 20, y);
     
-    // ========== TABLA PRODUCTOS ==========
-    let y = 65;
-    doc.setFontSize(11);
+    y += 6;
+    const tiendaText = data.tienda || 'COQUINARIA PARQUE ARAUCO';
+    doc.text(`Tienda: ${tiendaText.substring(0, 70)}`, 20, y);
+    
+    y += 6;
+    doc.text(`Factura: ${data.numeroFactura || '---'}`, 20, y);
+    doc.text(`Fecha Factura: ${data.fechaFactura || new Date().toLocaleDateString('es-CL')}`, 110, y);
+    
+    // TABLA DE PRODUCTOS
+    y += 10;
+    
+    // Headers
+    doc.setFillColor(240, 240, 240);
+    doc.rect(15, y, 180, 8, 'F');
+    
     doc.setFont('helvetica', 'bold');
-    doc.text('PRODUCTOS VERIFICADOS', 20, y);
+    doc.setFontSize(9);
+    doc.text('Código', 17, y + 5);
+    doc.text('Descripción', 40, y + 5);
+    doc.text('Cant.', 120, y + 5);
+    doc.text('Recep.', 140, y + 5);
+    doc.text('Dif.', 162, y + 5);
+    doc.text('Estado', 175, y + 5);
     
-    y += 8;
+    y += 10;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+    
+    // Productos
     recepcionActual.verificados.forEach((item, i) => {
-        if (y > 250) {
+        if (y > 270) {
             doc.addPage();
             y = 20;
+            
+            // Repetir headers
+            doc.setFillColor(240, 240, 240);
+            doc.rect(15, y, 180, 8, 'F');
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.text('Código', 17, y + 5);
+            doc.text('Descripción', 40, y + 5);
+            doc.text('Cant.', 120, y + 5);
+            doc.text('Recep.', 140, y + 5);
+            doc.text('Dif.', 162, y + 5);
+            doc.text('Estado', 175, y + 5);
+            y += 10;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
         }
         
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
+        // Alternar color
+        if (i % 2 === 0) {
+            doc.setFillColor(250, 250, 250);
+            doc.rect(15, y - 3, 180, 10, 'F');
+        }
         
-        const estado = item.correcto ? '✓ OK' : '⚠️ DIFERENCIA';
-        const color = item.correcto ? [5, 150, 105] : [220, 38, 38];
+        doc.text(item.sku, 17, y + 3);
         
-        // Nombre producto
-        doc.text(`${i + 1}. ${item.descripcion}`, 20, y);
-        // SKU
-        doc.setFontSize(8);
-        doc.setTextColor(100, 100, 100);
-        doc.text(`SKU: ${item.sku}`, 25, y + 4);
-        // Cantidades
-        doc.setFontSize(9);
+        const descripcionCorta = item.descripcion.length > 45 
+            ? item.descripcion.substring(0, 45) + '...' 
+            : item.descripcion;
+        doc.text(descripcionCorta, 40, y + 3);
+        
+        doc.text(item.cantidadGuia.toString(), 125, y + 3, { align: 'right' });
+        doc.text(item.cantidadRecibida.toString(), 145, y + 3, { align: 'right' });
+        
+        const diferencia = item.cantidadRecibida - item.cantidadGuia;
+        const diferenciaTexto = diferencia === 0 ? '0' : (diferencia > 0 ? `+${diferencia}` : diferencia.toString());
+        
+        if (diferencia !== 0) {
+            doc.setTextColor(diferencia > 0 ? 0 : 220, diferencia > 0 ? 100 : 38, diferencia > 0 ? 200 : 38);
+        }
+        doc.text(diferenciaTexto, 167, y + 3, { align: 'right' });
         doc.setTextColor(0, 0, 0);
-        doc.text(`Guía: ${item.cantidadGuia} | Recibido: ${item.cantidadRecibida}`, 25, y + 9);
         
-        // Estado
-        doc.setTextColor(...color);
+        const estado = item.correcto ? '✓' : '⚠';
+        const estadoColor = item.correcto ? [5, 150, 105] : [220, 38, 38];
+        doc.setTextColor(...estadoColor);
         doc.setFont('helvetica', 'bold');
-        doc.text(estado, 160, y + 5);
-        doc.setTextColor(0, 0, 0);
+        doc.text(estado, 177, y + 3);
         doc.setFont('helvetica', 'normal');
+        doc.setTextColor(0, 0, 0);
         
-        y += 16;
+        y += 10;
     });
     
-    // ========== RESUMEN ==========
+    // TOTALES
     y += 5;
+    doc.setDrawColor(200, 200, 200);
+    doc.line(15, y, 195, y);
+    y += 8;
+    
+    const totalOK = recepcionActual.verificados.filter(v => v.correcto).length;
+    const totalDiff = recepcionActual.verificados.filter(v => !v.correcto).length;
+    const totalUnidades = recepcionActual.verificados.reduce((sum, v) => sum + v.cantidadGuia, 0);
+    const totalRecibidas = recepcionActual.verificados.reduce((sum, v) => sum + v.cantidadRecibida, 0);
+    
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10);
+    doc.text('RESUMEN DE RECEPCIÓN:', 20, y);
+    
+    y += 7;
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.text(`Total productos: ${recepcionActual.verificados.length}`, 20, y);
+    doc.setTextColor(5, 150, 105);
+    doc.text(`Productos OK: ${totalOK}`, 80, y);
+    doc.setTextColor(220, 38, 38);
+    doc.text(`Con diferencias: ${totalDiff}`, 130, y);
+    
+    y += 6;
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Total unidades guía: ${totalUnidades}`, 20, y);
+    doc.text(`Total recibidas: ${totalRecibidas}`, 80, y);
+    
+    const diferenciaTotal = totalRecibidas - totalUnidades;
+    if (diferenciaTotal !== 0) {
+        doc.setTextColor(diferenciaTotal > 0 ? 0 : 220, diferenciaTotal > 0 ? 100 : 38, diferenciaTotal > 0 ? 200 : 38);
+        doc.text(`Diferencia: ${diferenciaTotal > 0 ? '+' : ''}${diferenciaTotal}`, 130, y);
+    }
+    
+    // FIRMA
+    y += 15;
     if (y > 240) {
         doc.addPage();
         y = 20;
     }
     
-    doc.setDrawColor(200, 200, 200);
-    doc.line(20, y, 190, y);
-    y += 8;
-    
-    const totalOK = recepcionActual.verificados.filter(v => v.correcto).length;
-    const totalDiff = recepcionActual.verificados.filter(v => !v.correcto).length;
-    
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(10);
-    doc.text('RESUMEN:', 20, y);
-    doc.setFont('helvetica', 'normal');
-    doc.text(`Total productos: ${recepcionActual.verificados.length}`, 25, y + 6);
-    doc.setTextColor(5, 150, 105);
-    doc.text(`Productos OK: ${totalOK}`, 25, y + 12);
-    doc.setTextColor(220, 38, 38);
-    doc.text(`Con diferencias: ${totalDiff}`, 25, y + 18);
     doc.setTextColor(0, 0, 0);
-    
-    // ========== FIRMA ==========
-    y += 30;
-    if (y > 230) {
-        doc.addPage();
-        y = 20;
-    }
-    
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(11);
     doc.text('FIRMA DE RECEPCIÓN:', 20, y);
     
-    // Insertar imagen de firma
-    doc.addImage(firmaDataURL, 'PNG', 20, y + 5, 70, 25);
+    y += 5;
+    doc.addImage(firmaDataURL, 'PNG', 20, y, 70, 25);
     
-    // Línea de firma
+    y += 27;
     doc.setDrawColor(0, 0, 0);
-    doc.line(20, y + 32, 90, y + 32);
+    doc.line(20, y, 90, y);
     
+    y += 5;
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
-    doc.text(`Firmado el: ${new Date().toLocaleString('es-CL')}`, 20, y + 37);
+    doc.text(`Recepcionado por: _______________________`, 20, y);
     
-    // ========== FOOTER ==========
-    doc.setFontSize(8);
+    y += 5;
+    doc.text(`Fecha y hora: ${new Date().toLocaleString('es-CL')}`, 20, y);
+    
+    // FOOTER
+    doc.setFontSize(7);
     doc.setTextColor(100, 100, 100);
-    doc.text('Documento generado automáticamente por Sistema Coquinaria', 105, 285, { align: 'center' });
+    doc.text('Proveedor: 96999930-7 KITCHEN CENTER SPA', 20, 285);
+    doc.text('Documento generado por Sistema Coquinaria', 105, 285, { align: 'center' });
     
-    // ========== GUARDAR ==========
-    const fileName = `Recepcion_${recepcionActual.numeroGuia}_${new Date().toISOString().split('T')[0]}_FIRMADO.pdf`;
+    // GUARDAR
+    const fileName = `KC_Factura_${data.numeroFactura}_${new Date().toISOString().split('T')[0]}_FIRMADO.pdf`;
     doc.save(fileName);
     
-    showToast('✅ PDF firmado descargado');
+    showToast('✅ PDF formato Kitchen Center descargado');
     
-    // Cerrar modal y limpiar
     setTimeout(() => {
         closeShareModal();
         renderProducts();
