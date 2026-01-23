@@ -45,7 +45,7 @@
             background-color: var(--body-bg);
             color: var(--text-primary);
             min-height: 100vh;
-            padding-top: 200px;
+            padding-top: 240px;
             padding-bottom: 90px; 
             font-weight: 400;
             overflow-x: hidden;
@@ -85,16 +85,16 @@
     box-shadow: 0 4px 6px -4px rgba(0,0,0,0.05);
     padding-bottom: 8px;
 }
-        .search-container { padding: 8px 20px 6px 20px; 
+        .search-container { padding: 10px 20px 8px 20px; 
         background: var(--body-bg);
                           }
         .search-wrapper { position: relative; width: 100%; }
-        .search-input { width: 100%; background: white; border: 1px solid var(--border-light); padding: 8px 40px; border-radius: 12px; font-size: 14px; height: 38px; transition: all 0.2s; outline: none; }
+        .search-input { width: 100%; background: white; border: 1px solid var(--border-light); padding: 10px 40px; border-radius: 12px; font-size: 14px; height: 44px; transition: all 0.2s; outline: none; }
         .search-input:focus { border-color: var(--text-rosa-palo); box-shadow: 0 0 0 3px rgba(184, 92, 103, 0.1); }
         .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; width: 18px; }
         .clear-search { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background:none; border:none; font-size:16px; color:#999; display:none; padding:5px; }
 
-        .menu-scroll { display: flex; overflow-x: auto; gap: 8px; padding: 0 20px 8px 20px; scrollbar-width: none; align-items: center; height: 40px; }
+        .menu-scroll { display: flex; overflow-x: auto; gap: 8px; padding: 0 20px 10px 20px; scrollbar-width: none; align-items: center; height: 50px; }
         .menu-scroll::-webkit-scrollbar { display: none; }
 
         .menu-chip { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid var(--border-light); padding: 8px 16px; border-radius: 12px; font-size: 13px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.03); flex-shrink: 0; height: 38px; }
@@ -398,7 +398,7 @@
                 <button class="clear-search" onclick="clearSearch()">✕</button>
                 
                 <!-- SUGGESTIONS DROPDOWN -->
-                <div class="search-suggestions" id="searchSuggestions" style="display: none;"></div>
+                <div class="search-suggestions" id="searchSuggestions" style="display:none;"></div>
             </div>
         </div>
         
@@ -981,10 +981,10 @@ let filterExpanded = null; // 'category' | 'brand' | null
     toolbar.innerHTML = ''; 
 
     if (view === 'catalog') {
-        renderFilters(); // 👈 Renderizar filtros solo en catálogo
+        renderFilters();
     } else if (view === 'stock') {
         renderStockTools(toolbar);
-        renderFilters(); // 👈 Esto limpiará los filtros en vista stock
+        // No renderizar filtros en stock
     }
     
     renderProducts();
@@ -1611,7 +1611,7 @@ if (mainView === 'catalog') {
                 if(btnText) {
                     let onclickFn = `openShareModal('${modeLabel}')`;
                     if (stockMode === 'count') {
-                        onclickFn = `abrirModalFirmaConteo()`;
+                        onclickFn = `abrirFirmaConteo()`;
                     }
                     ctaContainer.innerHTML = `
                         <button class="btn-cta" onclick="${onclickFn}">
@@ -2856,82 +2856,73 @@ async function finalizarRecepcionConFirma() {
     }, 1000);
 }
 
-// ============================================
-// MODAL FIRMA CONTEO
-// ============================================
-function abrirModalFirmaConteo() {
+// FIRMA Y REPORTES
+function abrirFirmaConteo() {
     const total = Object.values(dataCount).reduce((s, c) => s + c, 0);
     if (total === 0) {
         showToast('⚠️ Debes contar al menos 1 producto');
         return;
     }
     
-    let overlay = document.getElementById('firmaOverlay');
-    if (!overlay) {
-        overlay = document.createElement('div');
-        overlay.id = 'firmaOverlay';
-        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:5000;padding:20px;';
-        document.body.appendChild(overlay);
+    let modal = document.getElementById('firmaModal');
+    if (!modal) {
+        modal = document.createElement('div');
+        modal.id = 'firmaModal';
+        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:5000;padding:20px;';
+        document.body.appendChild(modal);
     }
     
-    const totalProductos = Object.keys(dataCount).filter(k => dataCount[k] > 0).length;
+    const totalProd = Object.keys(dataCount).filter(k => dataCount[k] > 0).length;
     const hoy = new Date().toLocaleDateString('es-CL');
     
-    overlay.innerHTML = `
-        <div style="background: white; border-radius: 16px; padding: 25px; width: 100%; max-width: 400px; max-height: 85vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.25);">
-            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px; color: #1e293b;">🖊️ FIRMA DEL CONTEO</h3>
+    modal.innerHTML = `
+        <div style="background:white;border-radius:16px;padding:25px;width:100%;max-width:400px;max-height:85vh;overflow-y:auto;box-shadow:0 25px 50px rgba(0,0,0,0.25);">
+            <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;color:#1e293b;">🖊️ FIRMA DEL CONTEO</h3>
             
-            <div style="background: #f0fdf4; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #059669;">
-                <div style="font-size: 13px; color: #1e293b; margin-bottom: 5px;"><strong>Resumen:</strong></div>
-                <div style="font-size: 12px; color: #64748b;">
-                    📦 Productos: <strong>${totalProductos}</strong> | 📊 Unidades: <strong>${total}</strong>
-                </div>
-                <div style="font-size: 12px; color: #64748b; margin-top: 3px;">
-                    📅 Fecha: <strong>${hoy}</strong>
-                </div>
+            <div style="background:#f0fdf4;padding:12px;border-radius:8px;margin-bottom:20px;border-left:4px solid #059669;">
+                <div style="font-size:13px;color:#1e293b;margin-bottom:5px;"><strong>Resumen:</strong></div>
+                <div style="font-size:12px;color:#64748b;">📦 Productos: <strong>${totalProd}</strong> | 📊 Unidades: <strong>${total}</strong> | 📅 ${hoy}</div>
             </div>
             
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 14px;">Tu nombre <span style="color: #e74c3c;">*</span></label>
-                <select id="nombreFirma" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
-                    <option value="">-- Selecciona tu nombre --</option>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;font-weight:600;margin-bottom:8px;color:#1e293b;font-size:14px;">Nombre <span style="color:red;">*</span></label>
+                <select id="nombreFirmaSelect" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;">
+                    <option value="">-- Selecciona --</option>
                     <option value="Vicente">Vicente</option>
                     <option value="María José">María José</option>
                 </select>
             </div>
             
-            <div style="margin-bottom: 15px;">
-                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 14px;">Dibuja tu firma <span style="color: #e74c3c;">*</span></label>
-                <div style="border: 2px dashed #ccc; border-radius: 8px; overflow: hidden; background: white;">
-                    <canvas id="canvasFirmaConteo" style="width: 100%; height: 140px; display: block; cursor: crosshair;"></canvas>
+            <div style="margin-bottom:15px;">
+                <label style="display:block;font-weight:600;margin-bottom:8px;color:#1e293b;font-size:14px;">Firma <span style="color:red;">*</span></label>
+                <div style="border:2px dashed #ccc;border-radius:8px;overflow:hidden;background:white;">
+                    <canvas id="canvasFirma" style="width:100%;height:120px;display:block;cursor:crosshair;"></canvas>
                 </div>
-                <small style="display: block; margin-top: 5px; color: #94a3b8; text-align: center;">👆 Dibuja con mouse o dedo</small>
             </div>
             
-            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
-                <button onclick="limpiarFirmaConteo()" style="flex: 1; padding: 10px; background: #f3f4f6; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-weight: 500; color: #64748b; font-size: 13px;">🔄 Limpiar</button>
-                <button onclick="cerrarModalFirma()" style="flex: 1; padding: 10px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-weight: 500; color: #64748b; font-size: 13px;">Cancelar</button>
+            <div style="display:flex;gap:10px;margin-bottom:15px;">
+                <button onclick="limpiarCanvas()" style="flex:1;padding:10px;background:#f3f4f6;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-weight:500;color:#64748b;">🔄 Limpiar</button>
+                <button onclick="cerrarFirmaModal()" style="flex:1;padding:10px;background:white;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-weight:500;color:#64748b;">Cancelar</button>
             </div>
             
-            <button onclick="finalizarConFirma()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">✅ Generar Reportes</button>
+            <button onclick="generarReportesConteo()" style="width:100%;padding:12px;background:linear-gradient(135deg,#059669 0%,#047857 100%);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">✅ Generar Reportes</button>
         </div>
     `;
     
-    overlay.style.display = 'flex';
-    setTimeout(() => { inicializarCanvasFirmaConteo(); }, 150);
+    modal.style.display = 'flex';
+    setTimeout(() => inicializarCanvas(), 150);
 }
 
-function inicializarCanvasFirmaConteo() {
-    const canvas = document.getElementById('canvasFirmaConteo');
+function inicializarCanvas() {
+    const canvas = document.getElementById('canvasFirma');
     if (!canvas) return;
     
     const ctx = canvas.getContext('2d');
     canvas.width = canvas.offsetWidth;
-    canvas.height = 140;
-    
+    canvas.height = 120;
     let dibujando = false;
     
-    const iniciarDibujo = (e) => {
+    const inicio = (e) => {
         dibujando = true;
         const rect = canvas.getBoundingClientRect();
         const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
@@ -2940,7 +2931,7 @@ function inicializarCanvasFirmaConteo() {
         ctx.moveTo(x, y);
     };
     
-    const continarDibujo = (e) => {
+    const dibujo = (e) => {
         if (!dibujando) return;
         e.preventDefault?.();
         const rect = canvas.getBoundingClientRect();
@@ -2954,48 +2945,41 @@ function inicializarCanvasFirmaConteo() {
         ctx.stroke();
     };
     
-    const finalizarDibujo = () => { dibujando = false; };
-    
-    canvas.addEventListener('mousedown', iniciarDibujo);
-    canvas.addEventListener('mousemove', continarDibujo);
-    canvas.addEventListener('mouseup', finalizarDibujo);
-    canvas.addEventListener('mouseout', finalizarDibujo);
-    
-    canvas.addEventListener('touchstart', iniciarDibujo);
-    canvas.addEventListener('touchmove', continarDibujo);
-    canvas.addEventListener('touchend', finalizarDibujo);
+    canvas.addEventListener('mousedown', inicio);
+    canvas.addEventListener('mousemove', dibujo);
+    canvas.addEventListener('mouseup', () => dibujando = false);
+    canvas.addEventListener('mouseout', () => dibujando = false);
+    canvas.addEventListener('touchstart', inicio);
+    canvas.addEventListener('touchmove', dibujo);
+    canvas.addEventListener('touchend', () => dibujando = false);
 }
 
-function limpiarFirmaConteo() {
-    const canvas = document.getElementById('canvasFirmaConteo');
+function limpiarCanvas() {
+    const canvas = document.getElementById('canvasFirma');
     if (canvas) {
         const ctx = canvas.getContext('2d');
         ctx.clearRect(0, 0, canvas.width, canvas.height);
     }
 }
 
-function cerrarModalFirma() {
-    const overlay = document.getElementById('firmaOverlay');
-    if (overlay) overlay.style.display = 'none';
+function cerrarFirmaModal() {
+    const modal = document.getElementById('firmaModal');
+    if (modal) modal.style.display = 'none';
 }
 
-function finalizarConFirma() {
-    console.log('🔍 Iniciando finalizarConFirma');
+function generarReportesConteo() {
+    console.log('🔍 Iniciando generarReportesConteo');
     
-    const nombreSelect = document.getElementById('nombreFirma');
-    const nombre = nombreSelect ? nombreSelect.value.trim() : '';
-    const canvas = document.getElementById('canvasFirmaConteo');
-    
-    console.log('Nombre:', nombre);
-    console.log('Canvas:', canvas);
+    const nombre = document.getElementById('nombreFirmaSelect').value;
+    const canvas = document.getElementById('canvasFirma');
     
     if (!nombre) {
-        showToast('⚠️ Selecciona tu nombre');
+        showToast('⚠️ Selecciona un nombre');
         return;
     }
     
     if (!canvas) {
-        showToast('❌ Error: Canvas no encontrado');
+        showToast('❌ Canvas no encontrado');
         return;
     }
     
@@ -3003,126 +2987,104 @@ function finalizarConFirma() {
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const hayFirma = imageData.data.some((v, i) => i % 4 === 3 && v > 100);
     
-    console.log('¿Hay firma?', hayFirma);
-    
     if (!hayFirma) {
         showToast('⚠️ Dibuja tu firma');
         return;
     }
     
-    const firmaDataURL = canvas.toDataURL('image/png');
+    const firmaURL = canvas.toDataURL('image/png');
+    const total = Object.values(dataCount).reduce((s, c) => s + c, 0);
+    const totalProd = Object.keys(dataCount).filter(k => dataCount[k] > 0).length;
     
     try {
-        console.log('📊 Generando Excel...');
-        const total = Object.values(dataCount).reduce((s, c) => s + c, 0);
-        const totalProd = Object.keys(dataCount).filter(k => dataCount[k] > 0).length;
+        console.log('📄 Generando PDF...');
         
-        const datos = [
-            ['COQUINARIA - CONTEO DE INVENTARIO'],
-            [''],
-            ['Fecha:', new Date().toLocaleDateString('es-CL')],
-            ['Responsable:', nombre],
-            ['Productos contados:', totalProd],
-            ['Unidades totales:', total],
-            [''],
-            ['SKU', 'Producto', 'Marca', 'Cantidad']
-        ];
+        // Acceder a jsPDF correctamente
+        let jsPDFLib = window.jsPDF || window.jspdf;
+        if (!jsPDFLib) {
+            showToast('⏳ Cargando jsPDF...');
+            setTimeout(generarReportesConteo, 500);
+            return;
+        }
+        
+        const jsPDF = jsPDFLib.jsPDF || jsPDFLib;
+        const doc = new jsPDF();
+        
+        doc.setFillColor(74, 4, 4);
+        doc.rect(0, 0, 210, 30, 'F');
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(24);
+        doc.text('COQUINARIA', 105, 18, { align: 'center' });
+        
+        let y = 45;
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(14);
+        doc.text('REPORTE DE CONTEO', 105, y, { align: 'center' });
+        
+        y += 12;
+        doc.setFontSize(10);
+        doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, 20, y);
+        y += 6;
+        doc.text(`Responsable: ${nombre}`, 20, y);
+        y += 6;
+        doc.text(`Productos: ${totalProd} | Unidades: ${total}`, 20, y);
+        
+        if (firmaURL) {
+            y += 12;
+            doc.text('Firma:', 20, y);
+            y += 3;
+            doc.addImage(firmaURL, 'PNG', 20, y, 50, 25);
+        }
+        
+        y += 35;
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(9);
+        doc.text('SKU', 20, y);
+        doc.text('Producto', 50, y);
+        doc.text('Cant', 180, y);
+        
+        y += 5;
+        doc.line(20, y, 200, y);
+        y += 4;
+        
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
         
         rawProducts.forEach(p => {
             if (dataCount[p.sku] && dataCount[p.sku] > 0) {
-                datos.push([p.sku, p.name, p.brand, dataCount[p.sku]]);
+                if (y > 270) {
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.text(p.sku, 20, y);
+                doc.text(p.name.substring(0, 100), 50, y);
+                doc.text(dataCount[p.sku].toString(), 180, y);
+                y += 4;
             }
         });
         
-        const ws = XLSX.utils.aoa_to_sheet(datos);
-        ws['!cols'] = [{wch: 12}, {wch: 40}, {wch: 20}, {wch: 12}];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Conteo');
-        
         const fecha = new Date().toISOString().split('T')[0];
-        XLSX.writeFile(wb, `Conteo_${fecha}_${nombre.replace(/\s+/g, '_')}.xlsx`);
-        console.log('✅ Excel generado');
-        showToast('✅ Excel descargado');
+        const nombreLimpio = nombre.replace(/\s+/g, '_');
+        doc.save(`Conteo_${fecha}_${nombreLimpio}.pdf`);
         
+        console.log('✅ PDF generado correctamente');
+        showToast('✅ PDF descargado');
+        
+        // Cerrar y limpiar
         setTimeout(() => {
-            console.log('📄 Generando PDF...');
-            const { jsPDF } = window.jsPDF;
-            const doc = new jsPDF();
-            
-            doc.setFillColor(74, 4, 4);
-            doc.rect(0, 0, 210, 30, 'F');
-            doc.setTextColor(255, 255, 255);
-            doc.setFontSize(24);
-            doc.text('COQUINARIA', 105, 18, { align: 'center' });
-            
-            let y = 45;
-            doc.setTextColor(0, 0, 0);
-            doc.setFontSize(14);
-            doc.text('REPORTE DE CONTEO', 105, y, { align: 'center' });
-            
-            y += 12;
-            doc.setFontSize(10);
-            doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, 20, y);
-            y += 6;
-            doc.text(`Responsable: ${nombre}`, 20, y);
-            y += 6;
-            const total = Object.values(dataCount).reduce((s, c) => s + c, 0);
-            const totalProd = Object.keys(dataCount).filter(k => dataCount[k] > 0).length;
-            doc.text(`Productos: ${totalProd} | Unidades: ${total}`, 20, y);
-            
-            if (firmaDataURL) {
-                y += 12;
-                doc.text('Firma:', 20, y);
-                y += 3;
-                doc.addImage(firmaDataURL, 'PNG', 20, y, 50, 25);
-            }
-            
-            y += 35;
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(9);
-            doc.text('SKU', 20, y);
-            doc.text('Producto', 50, y);
-            doc.text('Cant', 180, y);
-            
-            y += 5;
-            doc.line(20, y, 200, y);
-            y += 4;
-            
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8);
-            
-            rawProducts.forEach(p => {
-                if (dataCount[p.sku] && dataCount[p.sku] > 0) {
-                    if (y > 270) {
-                        doc.addPage();
-                        y = 20;
-                    }
-                    doc.text(p.sku, 20, y);
-                    doc.text(p.name.substring(0, 100), 50, y);
-                    doc.text(dataCount[p.sku].toString(), 180, y);
-                    y += 4;
-                }
-            });
-            
-            const fecha = new Date().toISOString().split('T')[0];
-            doc.save(`Conteo_${fecha}_${nombre.replace(/\s+/g, '_')}.pdf`);
-            console.log('✅ PDF generado');
-            showToast('✅ PDF descargado');
-            
-            // Limpiar y cerrar
-            setTimeout(() => {
-                cerrarModalFirma();
-                // Limpiar datos
-                dataCount = {};
-                saveData();
-                renderProducts();
-            }, 500);
-        }, 600);
+            cerrarFirmaModal();
+            dataCount = {};
+            saveData();
+            renderProducts();
+            showToast('✅ Conteo completado');
+        }, 500);
+        
     } catch(e) {
         console.error('❌ Error:', e);
-        showToast('❌ Error generando reportes');
+        showToast('❌ Error: ' + e.message);
     }
 }
+
     </script>
 </body>
 </html>
