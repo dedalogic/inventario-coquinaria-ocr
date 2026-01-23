@@ -44,7 +44,7 @@
             background-color: var(--body-bg);
             color: var(--text-primary);
             min-height: 100vh;
-            padding-top: 150px;
+            padding-top: 200px;
             padding-bottom: 90px; 
             font-weight: 400;
             overflow-x: hidden;
@@ -84,19 +84,19 @@
     box-shadow: 0 4px 6px -4px rgba(0,0,0,0.05);
     padding-bottom: 8px;
 }
-        .search-container { padding: 10px 20px 8px 20px; 
+        .search-container { padding: 8px 20px 6px 20px; 
         background: var(--body-bg);
                           }
         .search-wrapper { position: relative; width: 100%; }
-        .search-input { width: 100%; background: white; border: 1px solid var(--border-light); padding: 10px 16px; border-radius: 12px; font-size: 14px; height: 42px; transition: all 0.2s; outline: none; }
+        .search-input { width: 100%; background: white; border: 1px solid var(--border-light); padding: 8px 40px; border-radius: 12px; font-size: 14px; height: 38px; transition: all 0.2s; outline: none; }
         .search-input:focus { border-color: var(--text-rosa-palo); box-shadow: 0 0 0 3px rgba(184, 92, 103, 0.1); }
-        .search-icon { display: none; }
+        .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #94a3b8; width: 18px; }
         .clear-search { position: absolute; right: 10px; top: 50%; transform: translateY(-50%); background:none; border:none; font-size:16px; color:#999; display:none; padding:5px; }
 
-        .menu-scroll { display: flex; overflow-x: auto; gap: 8px; padding: 0 20px 10px 20px; scrollbar-width: none; align-items: center; height: 50px; }
+        .menu-scroll { display: flex; overflow-x: auto; gap: 8px; padding: 0 20px 8px 20px; scrollbar-width: none; align-items: center; height: 40px; }
         .menu-scroll::-webkit-scrollbar { display: none; }
 
-        .menu-chip { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid var(--border-light); padding: 6px 14px; border-radius: 10px; font-size: 12px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.03); flex-shrink: 0; height: 34px; }
+        .menu-chip { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid var(--border-light); padding: 8px 16px; border-radius: 12px; font-size: 13px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.03); flex-shrink: 0; height: 38px; }
         .menu-chip.active { background: var(--text-rosa-palo); color: white; border-color: var(--text-rosa-palo); box-shadow: 0 4px 10px rgba(184, 92, 103, 0.3); font-weight: 600; }
         /* Colores Específicos */
         .menu-chip.count-active { background: var(--pantone-7747c); color: white; border-color: var(--pantone-7747c); box-shadow: 0 4px 10px rgba(47, 92, 57, 0.3); }
@@ -107,7 +107,7 @@
         .menu-chip:active { transform: scale(0.97); }
 
         /* LISTA */
-        .products-list { padding: 0 15px; }
+        .products-list { padding: 0 20px; }
         .product-card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid transparent; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.1s; }
         .product-card:active { transform: scale(0.99); background-color: #fafafa; }
         .product-card.counted { border-left: 4px solid var(--pantone-7747c); }
@@ -397,7 +397,7 @@
                 <button class="clear-search" onclick="clearSearch()">✕</button>
                 
                 <!-- SUGGESTIONS DROPDOWN -->
-                <div class="search-suggestions" id="searchSuggestions"></div>
+                <div class="search-suggestions" id="searchSuggestions" style="display: none;"></div>
             </div>
         </div>
         
@@ -1608,8 +1608,12 @@ if (mainView === 'catalog') {
                 if (stockMode === 'suggestion') { btnText = "Finalizar Sugerido"; modeLabel="Sugerido"; }
                 
                 if(btnText) {
+                    let onclickFn = `openShareModal('${modeLabel}')`;
+                    if (stockMode === 'count') {
+                        onclickFn = `abrirModalFirmaConteo()`;
+                    }
                     ctaContainer.innerHTML = `
-                        <button class="btn-cta" onclick="openShareModal('${modeLabel}')">
+                        <button class="btn-cta" onclick="${onclickFn}">
                             ${btnText}
                         </button>
                     `;
@@ -1661,7 +1665,7 @@ if (mainView === 'catalog') {
                 }
 
                 return `
-                    <div class="product-card ${borderClass}" onclick="openDetail('${p.sku}')">
+                    <div class="product-card ${borderClass}" ${mainView === 'catalog' ? `onclick="openDetail('${p.sku}')"` : ''}>
                         <div class="product-info">
                             <h4>${p.name}</h4>
                             <div class="product-sku">SKU: ${p.sku}</div>
@@ -2849,6 +2853,244 @@ async function finalizarRecepcionConFirma() {
         closeShareModal();
         renderProducts();
     }, 1000);
+}
+
+// ============================================
+// MODAL FIRMA CONTEO
+// ============================================
+function abrirModalFirmaConteo() {
+    const total = Object.values(dataCount).reduce((s, c) => s + c, 0);
+    if (total === 0) {
+        showToast('⚠️ Debes contar al menos 1 producto');
+        return;
+    }
+    
+    let overlay = document.getElementById('firmaOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'firmaOverlay';
+        overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:5000;padding:20px;';
+        document.body.appendChild(overlay);
+    }
+    
+    const totalProductos = Object.keys(dataCount).filter(k => dataCount[k] > 0).length;
+    const hoy = new Date().toLocaleDateString('es-CL');
+    
+    overlay.innerHTML = `
+        <div style="background: white; border-radius: 16px; padding: 25px; width: 100%; max-width: 400px; max-height: 85vh; overflow-y: auto; box-shadow: 0 25px 50px rgba(0,0,0,0.25);">
+            <h3 style="font-size: 18px; font-weight: 700; margin-bottom: 20px; color: #1e293b;">🖊️ FIRMA DEL CONTEO</h3>
+            
+            <div style="background: #f0fdf4; padding: 12px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #059669;">
+                <div style="font-size: 13px; color: #1e293b; margin-bottom: 5px;"><strong>Resumen:</strong></div>
+                <div style="font-size: 12px; color: #64748b;">
+                    📦 Productos: <strong>${totalProductos}</strong> | 📊 Unidades: <strong>${total}</strong>
+                </div>
+                <div style="font-size: 12px; color: #64748b; margin-top: 3px;">
+                    📅 Fecha: <strong>${hoy}</strong>
+                </div>
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 14px;">Tu nombre <span style="color: #e74c3c;">*</span></label>
+                <input type="text" id="nombreFirma" placeholder="Ej: Juan García" 
+                       style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box;" />
+            </div>
+            
+            <div style="margin-bottom: 15px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 14px;">Dibuja tu firma <span style="color: #e74c3c;">*</span></label>
+                <div style="border: 2px dashed #ccc; border-radius: 8px; overflow: hidden; background: white;">
+                    <canvas id="canvasFirmaConteo" style="width: 100%; height: 140px; display: block; cursor: crosshair;"></canvas>
+                </div>
+                <small style="display: block; margin-top: 5px; color: #94a3b8; text-align: center;">👆 Dibuja con mouse o dedo</small>
+            </div>
+            
+            <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                <button onclick="limpiarFirmaConteo()" style="flex: 1; padding: 10px; background: #f3f4f6; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-weight: 500; color: #64748b; font-size: 13px;">🔄 Limpiar</button>
+                <button onclick="cerrarModalFirma()" style="flex: 1; padding: 10px; background: white; border: 1px solid #e2e8f0; border-radius: 8px; cursor: pointer; font-weight: 500; color: #64748b; font-size: 13px;">Cancelar</button>
+            </div>
+            
+            <button onclick="finalizarConFirma()" style="width: 100%; padding: 12px; background: linear-gradient(135deg, #059669 0%, #047857 100%); color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 14px;">✅ Generar Reportes</button>
+        </div>
+    `;
+    
+    overlay.style.display = 'flex';
+    setTimeout(() => { inicializarCanvasFirmaConteo(); }, 150);
+}
+
+function inicializarCanvasFirmaConteo() {
+    const canvas = document.getElementById('canvasFirmaConteo');
+    if (!canvas) return;
+    
+    const ctx = canvas.getContext('2d');
+    canvas.width = canvas.offsetWidth;
+    canvas.height = 140;
+    
+    let dibujando = false;
+    
+    const iniciarDibujo = (e) => {
+        dibujando = true;
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+    };
+    
+    const continarDibujo = (e) => {
+        if (!dibujando) return;
+        e.preventDefault?.();
+        const rect = canvas.getBoundingClientRect();
+        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+        ctx.lineTo(x, y);
+        ctx.strokeStyle = '#000';
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.stroke();
+    };
+    
+    const finalizarDibujo = () => { dibujando = false; };
+    
+    canvas.addEventListener('mousedown', iniciarDibujo);
+    canvas.addEventListener('mousemove', continarDibujo);
+    canvas.addEventListener('mouseup', finalizarDibujo);
+    canvas.addEventListener('mouseout', finalizarDibujo);
+    
+    canvas.addEventListener('touchstart', iniciarDibujo);
+    canvas.addEventListener('touchmove', continarDibujo);
+    canvas.addEventListener('touchend', finalizarDibujo);
+}
+
+function limpiarFirmaConteo() {
+    const canvas = document.getElementById('canvasFirmaConteo');
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }
+}
+
+function cerrarModalFirma() {
+    const overlay = document.getElementById('firmaOverlay');
+    if (overlay) overlay.style.display = 'none';
+}
+
+function finalizarConFirma() {
+    const nombre = document.getElementById('nombreFirma').value.trim();
+    const canvas = document.getElementById('canvasFirmaConteo');
+    
+    if (!nombre) {
+        showToast('⚠️ Ingresa tu nombre');
+        return;
+    }
+    
+    const ctx = canvas.getContext('2d');
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const hayFirma = imageData.data.some((v, i) => i % 4 === 3 && v > 100);
+    
+    if (!hayFirma) {
+        showToast('⚠️ Dibuja tu firma');
+        return;
+    }
+    
+    const firmaDataURL = canvas.toDataURL('image/png');
+    
+    try {
+        const total = Object.values(dataCount).reduce((s, c) => s + c, 0);
+        const totalProd = Object.keys(dataCount).filter(k => dataCount[k] > 0).length;
+        
+        const datos = [
+            ['COQUINARIA - CONTEO DE INVENTARIO'],
+            [''],
+            ['Fecha:', new Date().toLocaleDateString('es-CL')],
+            ['Responsable:', nombre],
+            ['Productos contados:', totalProd],
+            ['Unidades totales:', total],
+            [''],
+            ['SKU', 'Producto', 'Marca', 'Cantidad']
+        ];
+        
+        rawProducts.forEach(p => {
+            if (dataCount[p.sku] && dataCount[p.sku] > 0) {
+                datos.push([p.sku, p.name, p.brand, dataCount[p.sku]]);
+            }
+        });
+        
+        const ws = XLSX.utils.aoa_to_sheet(datos);
+        ws['!cols'] = [{wch: 12}, {wch: 40}, {wch: 20}, {wch: 12}];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, 'Conteo');
+        
+        const fecha = new Date().toISOString().split('T')[0];
+        XLSX.writeFile(wb, `Conteo_${fecha}_${nombre.replace(/\s+/g, '_')}.xlsx`);
+        showToast('✅ Excel descargado');
+        
+        setTimeout(() => {
+            const { jsPDF } = window.jsPDF;
+            const doc = new jsPDF();
+            
+            doc.setFillColor(74, 4, 4);
+            doc.rect(0, 0, 210, 30, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(24);
+            doc.text('COQUINARIA', 105, 18, { align: 'center' });
+            
+            let y = 45;
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(14);
+            doc.text('REPORTE DE CONTEO', 105, y, { align: 'center' });
+            
+            y += 12;
+            doc.setFontSize(10);
+            doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, 20, y);
+            y += 6;
+            doc.text(`Responsable: ${nombre}`, 20, y);
+            y += 6;
+            doc.text(`Productos: ${totalProd} | Unidades: ${total}`, 20, y);
+            
+            if (firmaDataURL) {
+                y += 12;
+                doc.text('Firma:', 20, y);
+                y += 3;
+                doc.addImage(firmaDataURL, 'PNG', 20, y, 50, 25);
+            }
+            
+            y += 35;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.text('SKU', 20, y);
+            doc.text('Producto', 50, y);
+            doc.text('Cant', 180, y);
+            
+            y += 5;
+            doc.line(20, y, 200, y);
+            y += 4;
+            
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            
+            rawProducts.forEach(p => {
+                if (dataCount[p.sku] && dataCount[p.sku] > 0) {
+                    if (y > 270) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    doc.text(p.sku, 20, y);
+                    doc.text(p.name.substring(0, 100), 50, y);
+                    doc.text(dataCount[p.sku].toString(), 180, y);
+                    y += 4;
+                }
+            });
+            
+            const fecha = new Date().toISOString().split('T')[0];
+            doc.save(`Conteo_${fecha}_${nombre.replace(/\s+/g, '_')}.pdf`);
+            showToast('✅ PDF descargado');
+            cerrarModalFirma();
+        }, 600);
+    } catch(e) {
+        console.error('Error:', e);
+        showToast('❌ Error generando reportes');
+    }
 }
     </script>
 </body>
