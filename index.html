@@ -44,7 +44,7 @@
             background-color: var(--body-bg);
             color: var(--text-primary);
             min-height: 100vh;
-            padding-top: 150px;
+            padding-top: 230px;
             padding-bottom: 90px; 
             font-weight: 400;
             overflow-x: hidden;
@@ -108,24 +108,24 @@
 
         /* LISTA */
         .products-list { padding: 0 20px; }
-        .product-card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); border: 1px solid transparent; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.1s; }
+        .product-card { background: white; border-radius: 14px; padding: 20px; margin-bottom: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border: 1px solid transparent; display: flex; min-height: 80px; justify-content: space-between; align-items: center; cursor: pointer; transition: transform 0.1s; }
         .product-card:active { transform: scale(0.99); background-color: #fafafa; }
         .product-card.counted { border-left: 4px solid var(--pantone-7747c); }
         .product-card.reception-counted { border-left: 4px solid var(--pantone-131c); }
         .product-card.suggestion-counted { border-left: 4px solid var(--pantone-2379c); }
 
-        .product-info { flex: 1; margin-right: 15px; }
-        .product-info h4 { font-size: 14px; color: var(--text-primary); margin-bottom: 4px; line-height: 1.4; font-weight: 600; }
-        .product-sku { font-size: 11px; color: var(--text-secondary); background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-family: monospace; display: inline-block; font-weight: 500; }
+        .product-info { flex: 1; margin-right: 20px; }
+        .product-info h4 { font-size: 16px; color: var(--text-primary); margin-bottom: 6px; line-height: 1.4; font-weight: 600; }
+        .product-sku { font-size: 12px; color: var(--text-secondary); background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-family: monospace; display: inline-block; font-weight: 500; }
         
-        .stock-control { display: flex; align-items: center; gap: 5px; background: #f8fafc; padding: 4px; border-radius: 8px; border: 1px solid #e2e8f0; }
-        .stock-control.count-mode { border-color: var(--pantone-7747c); background: #f0fdf4; }
+        .stock-control { display: flex; align-items: center; gap: 8px; background: #f8fafc; padding: 8px 12px; border-radius: 10px; border: 2px solid #e2e8f0; }
+        .stock-control.count-mode { border-color: #059669; background: #ecfdf5; box-shadow: 0 4px 12px rgba(5, 150, 105, 0.2); }
         .stock-control.reception-mode { border-color: var(--pantone-131c); background: #fffbf0; }
         .stock-control.suggestion-mode { border-color: var(--pantone-2379c); background: #fdf2f8; }
 
-        .btn-stock { width: 30px; height: 30px; border: none; background: white; border-radius: 6px; color: var(--text-primary); font-weight: 700; font-size: 16px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); cursor: pointer; display: flex; align-items: center; justify-content: center; }
-        .btn-stock:active { background: #e2e8f0; }
-        .stock-input { width: 34px; border: none; background: transparent; text-align: center; font-weight: 700; font-size: 15px; color: var(--text-primary); }
+        .btn-stock { width: 40px; height: 40px; border: none; background: white; border-radius: 6px; color: var(--text-primary); font-weight: 700; font-size: 18px; box-shadow: 0 2px 4px rgba(0,0,0,0.08); transition: all 0.2s; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .btn-stock:active { background: #e2e8f0; transform: scale(0.95); }
+        .stock-input { width: 45px; border: none; background: transparent; text-align: center; font-weight: 700; font-size: 18px; color: var(--text-primary); }
         .catalog-display { font-size: 13px; font-weight: 600; color: #94a3b8; min-width: 40px; text-align: center; }
 
         /* Document Input (Recepción) */
@@ -157,7 +157,7 @@
         .detail-placeholder { font-size: 50px; opacity: 0.1; }
         .detail-content { padding: 25px; overflow-y: auto; }
         .detail-brand { font-size: 11px; text-transform: uppercase; color: var(--text-rosa-palo); font-weight: 700; letter-spacing: 1px; margin-bottom: 5px; }
-        .detail-origin { font-size: 10px; color: #64748b; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; font-weight: 600; text-transform: uppercase; margin-left: 8px; }
+        .detail-origin { font-size: 10px; color: #64748b; background: #f1f5f9; padding: 4px 8px; border-radius: 4px; font-weight: 600; text-transform: uppercase; margin-left: 8px; }
         .detail-title { font-size: 20px; font-weight: 700; color: var(--text-primary); line-height: 1.3; margin-bottom: 8px; }
         .detail-sku { font-size: 13px; color: #94a3b8; font-family: monospace; margin-bottom: 15px; }
         .detail-desc { font-size: 15px; line-height: 1.6; color: #475569; }
@@ -327,7 +327,7 @@
             font-size: 11px;
             color: #94a3b8;
             background: #f1f5f9;
-            padding: 2px 6px;
+            padding: 4px 8px;
             border-radius: 4px;
             flex-shrink: 0;
         }
@@ -1665,7 +1665,7 @@ if (mainView === 'catalog') {
                 }
 
                 return `
-                    <div class="product-card ${borderClass}" onclick="openDetail('${p.sku}')">
+                    <div class="product-card ${borderClass}" ${mainView === 'catalog' ? `onclick="openDetail('${p.sku}')"` : ''}>
                         <div class="product-info">
                             <h4>${p.name}</h4>
                             <div class="product-sku">SKU: ${p.sku}</div>
@@ -2339,7 +2339,7 @@ function setupSearch() {
                 html += '<div style="font-weight: 700; color: #991b1b; margin-bottom: 8px;">❌ FALTANTES:</div>';
                 faltantes.forEach(p => {
                     html += `
-                        <div style="font-size: 12px; color: #7f1d1d; margin-bottom: 4px;">
+                        <div style="font-size: 12px; color: #7f1d1d; margin-bottom: 6px;">
                             • SKU ${p.sku}: ${p.diferencia} unidades (${p.descripcion.substring(0, 40)}...)
                             ${p.comentario ? `<br><span style="color: #64748b; font-style: italic;">💬 ${p.comentario}</span>` : ''}
                         </div>
@@ -2353,7 +2353,7 @@ function setupSearch() {
                 html += '<div style="font-weight: 700; color: #1e40af; margin-bottom: 8px;">📦 EXTRAS:</div>';
                 extras.forEach(p => {
                     html += `
-                        <div style="font-size: 12px; color: #1e3a8a; margin-bottom: 4px;">
+                        <div style="font-size: 12px; color: #1e3a8a; margin-bottom: 6px;">
                             • SKU ${p.sku}: +${p.diferencia} unidades (${p.descripcion.substring(0, 40)}...)
                         </div>
                     `;
@@ -2859,6 +2859,8 @@ async function finalizarRecepcionConFirma() {
 // MODAL FIRMA CONTEO - EN STOCK
 // ============================================
 function abrirModalFirmaConteo() {
+    console.log('Abriendo modal firma - dataCount:', Object.keys(dataCount).length);
+    
     const total = Object.values(dataCount).reduce((s, c) => s + c, 0);
     if (total === 0) {
         showToast('⚠️ Debes contar al menos 1 producto');
@@ -2919,7 +2921,7 @@ function abrirModalFirmaConteo() {
 
 function inicializarCanvasFirmaConteo() {
     const canvas = document.getElementById('canvasFirmaConteo');
-    if (!canvas) return;
+    if (!canvas) { console.error('Canvas no encontrado'); return; }
     
     const ctx = canvas.getContext('2d');
     canvas.width = canvas.offsetWidth;
@@ -2976,6 +2978,8 @@ function cerrarModalFirma() {
 }
 
 function finalizarConFirma() {
+    console.log('Finalizando con firma');
+    
     const nombre = document.getElementById('nombreFirma').value.trim();
     const canvas = document.getElementById('canvasFirmaConteo');
     
@@ -2995,12 +2999,17 @@ function finalizarConFirma() {
     
     const firmaDataURL = canvas.toDataURL('image/png');
     
-    exportarConteoExcel(nombre);
-    setTimeout(() => {
-        exportarConteoPDF(nombre, firmaDataURL);
-        cerrarModalFirma();
-        showToast('✅ Reportes generados');
-    }, 800);
+    try {
+        exportarConteoExcel(nombre);
+        setTimeout(() => {
+            exportarConteoPDF(nombre, firmaDataURL);
+            cerrarModalFirma();
+            showToast('✅ Reportes generados');
+        }, 500);
+    } catch(e) {
+        console.error('Error:', e);
+        showToast('❌ Error generando reportes');
+    }
 }
 
 function exportarConteoExcel(nombre) {
@@ -3041,20 +3050,17 @@ function exportarConteoPDF(nombre, firmaURL) {
     
     const doc = new jsPDF();
     
-    // Header
     doc.setFillColor(74, 4, 4);
     doc.rect(0, 0, 210, 30, 'F');
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.text('COQUINARIA', 105, 18, { align: 'center' });
     
-    // Título
     let y = 45;
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(14);
     doc.text('REPORTE DE CONTEO DE INVENTARIO', 105, y, { align: 'center' });
     
-    // Datos
     y += 12;
     doc.setFontSize(10);
     doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, 20, y);
@@ -3065,7 +3071,6 @@ function exportarConteoPDF(nombre, firmaURL) {
     y += 6;
     doc.text(`Total de unidades: ${total}`, 20, y);
     
-    // Firma
     if (firmaURL) {
         y += 12;
         doc.text('Firma:', 20, y);
@@ -3075,7 +3080,6 @@ function exportarConteoPDF(nombre, firmaURL) {
     
     y += 35;
     
-    // Tabla
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(9);
     doc.text('SKU', 20, y);
@@ -3086,7 +3090,6 @@ function exportarConteoPDF(nombre, firmaURL) {
     doc.line(20, y, 200, y);
     y += 4;
     
-    // Productos
     doc.setFont('helvetica', 'normal');
     doc.setFontSize(8);
     
@@ -3104,7 +3107,6 @@ function exportarConteoPDF(nombre, firmaURL) {
         }
     });
     
-    // Footer
     doc.setTextColor(150, 150, 150);
     doc.setFontSize(8);
     doc.text(`Documento generado por Sistema Coquinaria - ${new Date().toLocaleString('es-CL')}`, 105, 285, { align: 'center' });
