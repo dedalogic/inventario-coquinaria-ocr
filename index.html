@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inventario Coquinaria</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
 
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#4a0404">
@@ -2892,8 +2893,11 @@ function abrirModalFirmaConteo() {
             
             <div style="margin-bottom: 15px;">
                 <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; font-size: 14px;">Tu nombre <span style="color: #e74c3c;">*</span></label>
-                <input type="text" id="nombreFirma" placeholder="Ej: Juan García" 
-                       style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box;" />
+                <select id="nombreFirma" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; box-sizing: border-box;">
+                    <option value="">-- Selecciona tu nombre --</option>
+                    <option value="Vicente">Vicente</option>
+                    <option value="María José">María José</option>
+                </select>
             </div>
             
             <div style="margin-bottom: 15px;">
@@ -2976,17 +2980,30 @@ function cerrarModalFirma() {
 }
 
 function finalizarConFirma() {
-    const nombre = document.getElementById('nombreFirma').value.trim();
+    console.log('🔍 Iniciando finalizarConFirma');
+    
+    const nombreSelect = document.getElementById('nombreFirma');
+    const nombre = nombreSelect ? nombreSelect.value.trim() : '';
     const canvas = document.getElementById('canvasFirmaConteo');
     
+    console.log('Nombre:', nombre);
+    console.log('Canvas:', canvas);
+    
     if (!nombre) {
-        showToast('⚠️ Ingresa tu nombre');
+        showToast('⚠️ Selecciona tu nombre');
+        return;
+    }
+    
+    if (!canvas) {
+        showToast('❌ Error: Canvas no encontrado');
         return;
     }
     
     const ctx = canvas.getContext('2d');
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const hayFirma = imageData.data.some((v, i) => i % 4 === 3 && v > 100);
+    
+    console.log('¿Hay firma?', hayFirma);
     
     if (!hayFirma) {
         showToast('⚠️ Dibuja tu firma');
@@ -2996,6 +3013,7 @@ function finalizarConFirma() {
     const firmaDataURL = canvas.toDataURL('image/png');
     
     try {
+        console.log('📊 Generando Excel...');
         const total = Object.values(dataCount).reduce((s, c) => s + c, 0);
         const totalProd = Object.keys(dataCount).filter(k => dataCount[k] > 0).length;
         
@@ -3023,9 +3041,11 @@ function finalizarConFirma() {
         
         const fecha = new Date().toISOString().split('T')[0];
         XLSX.writeFile(wb, `Conteo_${fecha}_${nombre.replace(/\s+/g, '_')}.xlsx`);
+        console.log('✅ Excel generado');
         showToast('✅ Excel descargado');
         
         setTimeout(() => {
+            console.log('📄 Generando PDF...');
             const { jsPDF } = window.jsPDF;
             const doc = new jsPDF();
             
@@ -3046,6 +3066,8 @@ function finalizarConFirma() {
             y += 6;
             doc.text(`Responsable: ${nombre}`, 20, y);
             y += 6;
+            const total = Object.values(dataCount).reduce((s, c) => s + c, 0);
+            const totalProd = Object.keys(dataCount).filter(k => dataCount[k] > 0).length;
             doc.text(`Productos: ${totalProd} | Unidades: ${total}`, 20, y);
             
             if (firmaDataURL) {
@@ -3084,11 +3106,20 @@ function finalizarConFirma() {
             
             const fecha = new Date().toISOString().split('T')[0];
             doc.save(`Conteo_${fecha}_${nombre.replace(/\s+/g, '_')}.pdf`);
+            console.log('✅ PDF generado');
             showToast('✅ PDF descargado');
-            cerrarModalFirma();
+            
+            // Limpiar y cerrar
+            setTimeout(() => {
+                cerrarModalFirma();
+                // Limpiar datos
+                dataCount = {};
+                saveData();
+                renderProducts();
+            }, 500);
         }, 600);
     } catch(e) {
-        console.error('Error:', e);
+        console.error('❌ Error:', e);
         showToast('❌ Error generando reportes');
     }
 }
