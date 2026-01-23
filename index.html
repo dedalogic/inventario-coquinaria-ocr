@@ -364,6 +364,306 @@
             color: #94a3b8;
             font-size: 13px;
         }
+
+        /* ===================================
+           ESTILOS PARA MODALES (FIRMA Y EXPORTACIÓN)
+           =================================== */
+
+        /* MODALES */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            animation: fadeIn 0.3s ease;
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            max-width: 500px;
+            width: 90%;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: slideUp 0.3s ease;
+        }
+
+        @keyframes slideUp {
+            from {
+                transform: translateY(50px);
+                opacity: 0;
+            }
+            to {
+                transform: translateY(0);
+                opacity: 1;
+            }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px;
+            border-bottom: 1px solid var(--border-light);
+        }
+
+        .modal-header h2 {
+            margin: 0;
+            font-size: 18px;
+            color: var(--text-primary);
+        }
+
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 6px;
+            transition: all 0.2s;
+        }
+
+        .modal-close:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .modal-footer {
+            display: flex;
+            gap: 10px;
+            padding: 15px 20px;
+            border-top: 1px solid var(--border-light);
+            justify-content: flex-end;
+        }
+
+        /* FIRMA MODAL */
+        .signature-modal-content {
+            max-width: 450px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .required {
+            color: #e74c3c;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: 'Inter', sans-serif;
+            transition: all 0.2s;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: var(--text-rosa-palo);
+            box-shadow: 0 0 0 3px rgba(184, 92, 103, 0.1);
+        }
+
+        .signature-container {
+            border: 2px solid var(--border-light);
+            border-radius: 8px;
+            overflow: hidden;
+            background: white;
+            aspect-ratio: 16 / 6;
+        }
+
+        .signature-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            touch-action: none;
+            cursor: crosshair;
+        }
+
+        /* EXPORT MODAL */
+        .export-modal-content {
+            max-width: 380px;
+        }
+
+        .signer-info {
+            background: #f8fafc;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: var(--text-secondary);
+        }
+
+        .signer-info strong {
+            color: var(--text-primary);
+        }
+
+        .export-options {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .btn-export {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 14px 16px;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-excel {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+
+        .btn-excel:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(16, 185, 129, 0.4);
+        }
+
+        .btn-pdf {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+        }
+
+        .btn-pdf:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(239, 68, 68, 0.4);
+        }
+
+        .btn-whatsapp {
+            background: linear-gradient(135deg, #25d366 0%, #20ba5a 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3);
+        }
+
+        .btn-whatsapp:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(37, 211, 102, 0.4);
+        }
+
+        .btn-email {
+            background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            color: white;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+        }
+
+        .btn-email:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.4);
+        }
+
+        /* BOTONES */
+        .btn-secondary {
+            background: #f3f4f6;
+            color: var(--text-primary);
+            border: 1px solid var(--border-light);
+        }
+
+        .btn-secondary:hover {
+            background: #e5e7eb;
+        }
+
+        .btn {
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .btn-primary {
+            background: var(--btn-cta-gradient);
+            color: white;
+            box-shadow: 0 4px 12px var(--btn-cta-shadow);
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px var(--btn-cta-shadow);
+        }
+
+        /* RESPONSIVE */
+        @media (max-width: 600px) {
+            .modal-content {
+                width: 95%;
+                max-height: 95vh;
+                border-radius: 12px;
+            }
+
+            .modal-header h2 {
+                font-size: 16px;
+            }
+
+            .modal-body {
+                padding: 16px;
+            }
+
+            .modal-footer {
+                flex-direction: column-reverse;
+            }
+
+            .modal-footer .btn {
+                width: 100%;
+            }
+
+            .export-options {
+                gap: 10px;
+            }
+
+            .btn-export {
+                padding: 12px 14px;
+                font-size: 13px;
+            }
+        }
     </style>
 </head>
 <body>
@@ -948,957 +1248,7 @@ let filterExpanded = null; // 'category' | 'brand' | null
 
         function saveData() {
             localStorage.setItem(`inv_count_${selectedDateKey}`, JSON.stringify(dataCount));
-            localStorage.setItem(`inv_recep_${selectedDateKey}`, JSON.stringify(dataReception));
-            localStorage.setItem(`inv_sugg_${selectedDateKey}`, JSON.stringify(dataSuggestion));
-            if(stockMode === 'reception') localStorage.setItem(`inv_recep_doc_${selectedDateKey}`, currentDocNumber);
-            document.getElementById('lastSavedIndicator').textContent = 'Guardado ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
-        }
-
-        // ============================================
-        // NAVIGATION
-        // ============================================
-       function switchMainView(view) {
-    mainView = view;
-    filterExpanded = null; // 👈 Resetear filtros expandidos
-    
-    document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
-    document.getElementById(`nav-${view}`).classList.add('active');
-    
-    const prodView = document.getElementById('view-products');
-    const histView = document.getElementById('view-history');
-    
-    if (view === 'history') {
-        prodView.style.display = 'none';
-        histView.style.display = 'block';
-        renderHistory();
-    } else {
-        prodView.style.display = 'block';
-        histView.style.display = 'none';
-    }
-    
-    const toolbar = document.getElementById('toolbarMenu');
-    toolbar.innerHTML = ''; 
-
-    if (view === 'catalog') {
-        renderFilters(); // 👈 Renderizar filtros solo en catálogo
-    } else if (view === 'stock') {
-        renderStockTools(toolbar);
-        renderFilters(); // 👈 Esto limpiará los filtros en vista stock
-    }
-    
-    renderProducts();
-    window.scrollTo(0,0);
-}
-        // ============================================
-// FILTROS EXPANDIBLES
-// ============================================
-function toggleFilter(type) {
-    if (filterExpanded === type) {
-        filterExpanded = null;
-    } else {
-        filterExpanded = type;
-    }
-    renderFilters();
-}
-
-function selectFilterOption(type, value) {
-    if (type === 'category') {
-        currentCategory = value;
-    } else if (type === 'brand') {
-        currentBrand = value;
-    }
-    renderFilters();
-    renderProducts();
-}
-function renderFilters() {
-    const togglesContainer = document.getElementById('filterToggles');
-    const optionsContainer = document.getElementById('filterOptions');
-    
-    if (!togglesContainer || !optionsContainer) return;
-    
-    // 🔥 OCULTAR FILTROS SI NO ESTAMOS EN CATÁLOGO
-    if (mainView !== 'catalog') {
-        togglesContainer.innerHTML = '';
-        optionsContainer.innerHTML = '';
-        return;
-    }
-    
-    // BOTONES TOGGLE
-    const categoryLabel = currentCategory !== 'Todos' ? currentCategory : '';
-    const brandLabel = currentBrand !== 'Todas' ? currentBrand : '';
-    
-    togglesContainer.innerHTML = `
-        <div class="filter-toggle-container">
-            <div class="filter-toggle ${filterExpanded === 'category' ? 'expanded active' : ''}" onclick="toggleFilter('category')">
-                <div class="filter-label">
-                    <span>📑 Categoría</span>
-                    ${categoryLabel ? `<span class="filter-selected">${categoryLabel}</span>` : ''}
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-            </div>
-            
-            <div class="filter-toggle ${filterExpanded === 'brand' ? 'expanded active' : ''}" onclick="toggleFilter('brand')">
-                <div class="filter-label">
-                    <span>🏷️ Marca</span>
-                    ${brandLabel ? `<span class="filter-selected">${brandLabel}</span>` : ''}
-                </div>
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-            </div>
-        </div>
-    `;
-    
-    // OPCIONES
-    if (filterExpanded === 'category') {
-        const categories = ['Todos', ...CATEGORIES];
-        optionsContainer.innerHTML = `
-            <div class="filter-options expanded">
-                <div class="filter-chips">
-                    ${categories.map(cat => `
-                        <div class="filter-chip ${currentCategory === cat ? 'active' : ''}" 
-                             onclick="selectFilterOption('category', '${cat}')">
-                            ${cat}
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    } else if (filterExpanded === 'brand') {
-        const brands = ['Todas', ...new Set(rawProducts.map(p => p.brand).filter(Boolean).sort())];
-        optionsContainer.innerHTML = `
-            <div class="filter-options expanded">
-                <div class="filter-chips">
-                    ${brands.map(brand => `
-                        <div class="filter-chip ${currentBrand === brand ? 'active' : ''}" 
-                             onclick="selectFilterOption('brand', '${brand}')">
-                            ${brand}
-                        </div>
-                    `).join('')}
-                </div>
-            </div>
-        `;
-    } else {
-        optionsContainer.innerHTML = '';
-    }
-}
-
-        function renderCategories(container) {
-            const cats = ['Todos', ...CATEGORIES];
-            container.innerHTML = cats.map(cat => `
-                <div class="menu-chip ${currentCategory === cat ? 'active' : ''}" 
-                     onclick="selectCategory('${cat}')">${cat}</div>
-            `).join('');
-        }
-
-        function selectCategory(cat) {
-            currentCategory = cat;
-            switchMainView('catalog');
-        }
-
-        function renderStockTools(container) {
-            const modes = [
-                {id: 'date', label: 'Fecha', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />'},
-                {id: 'count', label: 'Conteo', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />'},
-                {id: 'reception', label: 'Recepción', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />'},
-                {id: 'suggestion', label: 'Sugerido', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />'},
-                {id: 'import', label: 'Importar', icon: '<path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />'}
-            ];
-
-            container.innerHTML = modes.map(m => {
-                let activeClass = '';
-                if(stockMode === m.id) {
-                    if(m.id === 'count') activeClass = 'count-active';
-                    else if(m.id === 'reception') activeClass = 'recep-active';
-                    else if(m.id === 'suggestion') activeClass = 'sugg-active';
-                }
-
-                let onclick = `setStockMode('${m.id}')`;
-                if(m.id === 'date') onclick = `openDate()`;
-                if(m.id === 'import') onclick = `document.getElementById('fileImport').click()`;
-
-                return `
-                <div class="menu-chip ${activeClass}" onclick="${onclick}">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">${m.icon}</svg>
-                    ${m.label}
-                </div>`;
-            }).join('');
-            
-            if (stockMode === 'reception') {
-                container.innerHTML += `
-                <div class="menu-chip" onclick="triggerCamera()">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
-                    Escanear Guía
-                </div>
-                <div class="menu-chip" onclick="document.getElementById('importExcelInput').click()">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" /></svg>
-                    Importar Excel
-                </div>`;
-            }
-        }
-
-        function setStockMode(mode) {
-            stockMode = mode;
-            switchMainView('stock');
-        }
-
-  // ============================================
-// ESCANEO EN 2 PASOS: GUÍA → PRODUCTOS
-// ============================================
-let escaneoActual = {
-    paso: 1, // 1 = Número de guía, 2 = Productos
-    numeroGuia: '',
-    productosDetectados: []
-};
-
-async function handleScan(input) {
-    if (!input.files || !input.files[0]) return;
-    
-    const file = input.files[0];
-    
-    if (file.size > 10 * 1024 * 1024) {
-        showToast("⚠️ Imagen muy grande. Máximo 10MB.");
-        return;
-    }
-    
-    showToast("📸 Procesando guía Kitchen Center...");
-    
-    try {
-        const compressedImage = await compressImage(file);
-        showToast("🚀 Enviando a Google Vision AI...");
-        
-        const response = await fetch('/.netlify/functions/process-guia', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: compressedImage })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Error procesando imagen');
-        }
-        
-        showToast("🔍 Analizando datos...");
-        const data = await response.json();
-        
-        if (!data.success) {
-            throw new Error(data.error || 'No se pudo procesar la imagen');
-        }
-        
-        if (data.productos && data.productos.length > 0) {
-            showToast(`✅ ${data.productos.length} productos detectados`);
-            
-            // Aplicar directamente a dataReception
-            currentDocNumber = data.numeroFactura;
-            const docInput = document.getElementById('docNumberInput');
-            if (docInput) docInput.value = data.numeroFactura;
-            
-            let productosImportados = 0;
-            let productosNoEncontrados = [];
-            
-            data.productos.forEach(prod => {
-                const productoExiste = rawProducts.find(p => p.sku === prod.codigo);
-                
-                if (productoExiste) {
-                    dataReception[prod.codigo] = prod.cantidad;
-                    productosImportados++;
-                } else {
-                    productosNoEncontrados.push(prod.codigo);
-                }
-            });
-            
-            saveData();
-            renderProducts();
-            mostrarResumenGuia(data, productosImportados, productosNoEncontrados);
-            
-        } else {
-            showToast("❌ No se detectaron productos. Intenta de nuevo.");
-        }
-        
-    } catch (error) {
-        console.error('Error:', error);
-        showToast("❌ Error: " + error.message);
-    }
-}
-
-function mostrarInstruccionEscaneo() {
-    const modal = document.getElementById('shareModal');
-    const modalContent = modal.querySelector('.modal-content');
-    
-    const paso = escaneoActual.paso;
-    
-    if (paso === 1) {
-        modalContent.innerHTML = `
-            <div style="text-align: center; padding: 30px 20px;">
-                <div style="font-size: 48px; margin-bottom: 15px; animation: pulse 2s infinite;">📋</div>
-                <h3 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 10px;">Ayudemos a la IA a leer mejor</h3>
-                <p style="font-size: 15px; color: #64748b; margin-bottom: 25px; line-height: 1.6;">
-                    Primero, enfoca <strong>solo el número de la guía</strong> para detectarlo correctamente
-                </p>
-                
-                <div style="background: #fffbf0; border: 2px dashed #f59e0b; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
-                    <div style="font-size: 14px; color: #92400e; font-weight: 600; margin-bottom: 8px;">📸 PASO 1 de 2</div>
-                    <div style="font-size: 13px; color: #78350f;">Acerca el teléfono al <strong>número de guía</strong></div>
-                </div>
-                
-                <button class="btn-cta" onclick="abrirCamaraPaso1()" style="width: 100%;">
-                    📷 Escanear Número de Guía
-                </button>
-                <button class="btn-cta secondary" onclick="closeShareModal()" style="width: 100%; margin-top: 10px;">
-                    Cancelar
-                </button>
-            </div>
-            
-            <style>
-                @keyframes pulse {
-                    0%, 100% { transform: scale(1); opacity: 1; }
-                    50% { transform: scale(1.1); opacity: 0.8; }
-                }
-            </style>
-        `;
-    } else {
-        modalContent.innerHTML = `
-            <div style="text-align: center; padding: 30px 20px;">
-                <div style="font-size: 48px; margin-bottom: 15px; animation: pulse 2s infinite;">📦</div>
-                <h3 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 10px;">¡Perfecto!</h3>
-                <p style="font-size: 15px; color: #64748b; margin-bottom: 15px; line-height: 1.6;">
-                    Guía detectada: <strong style="color: #059669;">${escaneoActual.numeroGuia}</strong>
-                </p>
-                <p style="font-size: 15px; color: #64748b; margin-bottom: 25px; line-height: 1.6;">
-                    Ahora, enfoca la <strong>lista de productos completa</strong> (códigos, nombres y cantidades)
-                </p>
-                
-                <div style="background: #f0fdf4; border: 2px dashed #059669; border-radius: 12px; padding: 20px; margin-bottom: 25px;">
-                    <div style="font-size: 14px; color: #166534; font-weight: 600; margin-bottom: 8px;">📸 PASO 2 de 2</div>
-                    <div style="font-size: 13px; color: #15803d;">Muestra todos los productos de la guía</div>
-                </div>
-                
-                <button class="btn-cta" onclick="abrirCamaraPaso2()" style="width: 100%;">
-                    📷 Escanear Productos
-                </button>
-                <button class="btn-cta secondary" onclick="closeShareModal()" style="width: 100%; margin-top: 10px;">
-                    Cancelar
-                </button>
-            </div>
-            
-            <style>
-                @keyframes pulse {
-                    0%, 100% { transform: scale(1); opacity: 1; }
-                    50% { transform: scale(1.1); opacity: 0.8; }
-                }
-            </style>
-        `;
-    }
-    
-    modal.classList.add('active');
-}
-
-function abrirCamaraPaso1() {
-    closeShareModal();
-    document.getElementById('scanInput').click();
-}
-
-function abrirCamaraPaso2() {
-    closeShareModal();
-    document.getElementById('scanInput').click();
-}
-
-// ============================================
-// MODIFICAR handleScan PARA 2 PASOS
-// ============================================
-async function handleScan(input) {
-    if (!input.files || !input.files[0]) return;
-    
-    const file = input.files[0];
-    
-    if (file.size > 10 * 1024 * 1024) {
-        showToast("⚠️ Imagen muy grande. Máximo 10MB.");
-        return;
-    }
-    
-    showToast("📸 Procesando guía Kitchen Center...");
-    
-    try {
-        const compressedImage = await compressImage(file);
-        showToast("🚀 Enviando a Google Vision AI...");
-        
-        const response = await fetch('/.netlify/functions/process-guia', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ image: compressedImage })
-        });
-        
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || 'Error procesando imagen');
-        }
-        
-        showToast("🔍 Analizando datos...");
-        const data = await response.json();
-        
-        if (!data.success) {
-            throw new Error(data.error || 'No se pudo procesar la imagen');
-        }
-        
-        if (data.productos && data.productos.length > 0) {
-            showToast(`✅ ${data.productos.length} productos detectados`);
-            
-            // Aplicar directamente a dataReception
-            currentDocNumber = data.numeroFactura;
-            const docInput = document.getElementById('docNumberInput');
-            if (docInput) docInput.value = data.numeroFactura;
-            
-            let productosImportados = 0;
-            let productosNoEncontrados = [];
-            
-            data.productos.forEach(prod => {
-                const productoExiste = rawProducts.find(p => p.sku === prod.codigo);
-                
-                if (productoExiste) {
-                    dataReception[prod.codigo] = prod.cantidad;
-                    productosImportados++;
-                } else {
-                    productosNoEncontrados.push(prod.codigo);
-                }
-            });
-            
-            saveData();
-            renderProducts();
-            mostrarResumenGuia(data, productosImportados, productosNoEncontrados);
-            
-        } else {
-            showToast("❌ No se detectaron productos. Intenta de nuevo.");
-        }
-        
-    } catch (error) {
-        console.error('Error:', error);
-        showToast("❌ Error: " + error.message);
-    } finally {
-        // 👈 AGREGAR ESTO: Limpiar el input para permitir seleccionar la misma imagen otra vez
-        input.value = '';
-    }
-}
-function procesarGuiaCompleta() {
-    // Combinar número de guía + productos
-    const dataCompleta = {
-        numeroGuia: escaneoActual.numeroGuia,
-        productos: escaneoActual.productosDetectados
-    };
-    
-    // Aplicar a dataReception
-    currentDocNumber = dataCompleta.numeroGuia;
-    const docInput = document.getElementById('docNumberInput');
-    if (docInput) docInput.value = dataCompleta.numeroGuia;
-    
-    dataCompleta.productos.forEach(prod => {
-        dataReception[prod.codigo] = prod.cantidad;
-    });
-    
-    saveData();
-    renderProducts();
-    
-    // Mostrar resumen
-    mostrarResumenGuia(dataCompleta, dataCompleta.productos.length, []);
-}
-        async function compressImage(file) {
-            return new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                
-                reader.onload = (e) => {
-                    const img = new Image();
-                    
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas');
-                        
-                        const MAX_WIDTH = 1200;
-                        const MAX_HEIGHT = 1600;
-                        
-                        let width = img.width;
-                        let height = img.height;
-                        
-                        if (width > height) {
-                            if (width > MAX_WIDTH) {
-                                height *= MAX_WIDTH / width;
-                                width = MAX_WIDTH;
-                            }
-                        } else {
-                            if (height > MAX_HEIGHT) {
-                                width *= MAX_HEIGHT / height;
-                                height = MAX_HEIGHT;
-                            }
-                        }
-                        
-                        canvas.width = width;
-                        canvas.height = height;
-                        
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, width, height);
-                        
-                        const compressedBase64 = canvas.toDataURL('image/jpeg', 0.7);
-                        
-                        console.log('📸 Original:', (file.size / 1024).toFixed(0), 'KB');
-                        console.log('⚡ Comprimida:', (compressedBase64.length * 0.75 / 1024).toFixed(0), 'KB');
-                        
-                        resolve(compressedBase64);
-                    };
-                    
-                    img.onerror = () => reject(new Error('Error al cargar imagen'));
-                    img.src = e.target.result;
-                };
-                
-                reader.onerror = () => reject(new Error('Error al leer archivo'));
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function procesarGuiaOCR(data) {
-            if (data.numeroGuia) {
-                currentDocNumber = data.numeroGuia;
-                const docInput = document.getElementById('docNumberInput');
-                if (docInput) docInput.value = data.numeroGuia;
-            }
-            
-            if (data.productos && data.productos.length > 0) {
-                let productosImportados = 0;
-                let productosNoEncontrados = [];
-                
-                data.productos.forEach(prod => {
-                    const productoExiste = rawProducts.find(p => p.sku === prod.codigo);
-                    
-                    if (productoExiste) {
-                        dataReception[prod.codigo] = prod.cantidad;
-                        productosImportados++;
-                    } else {
-                        productosNoEncontrados.push(prod.codigo);
-                    }
-                });
-                
-                saveData();
-                renderProducts();
-                mostrarResumenGuia(data, productosImportados, productosNoEncontrados);
-                
-            } else {
-                showToast("⚠️ No se detectaron productos en la guía");
-            }
-        }
-
-function mostrarResumenGuia(data, importados, noEncontrados) {
-    const modal = document.getElementById('shareModal');
-    const modalContent = modal.querySelector('.modal-content');
-    
-    const totalUnidades = data.totalUnidades || data.productos.reduce((sum, p) => sum + p.cantidad, 0);
-    
-    let html = `
-        <div style="text-align: center; padding: 20px 0;">
-            <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
-            <h3 style="font-size: 20px; font-weight: 700; color: #1e293b; margin-bottom: 5px;">Guía Kitchen Center Escaneada</h3>
-            <div style="font-size: 32px; font-weight: 800; color: #4a0404; letter-spacing: 2px; margin-bottom: 10px;">#${data.numeroFactura || 'N/A'}</div>
-            ${data.folio ? `<div style="font-size: 14px; color: #64748b; margin-bottom: 5px;">Folio: ${data.folio}</div>` : ''}
-            ${data.fechaFactura ? `<div style="font-size: 13px; color: #64748b;">Fecha: ${data.fechaFactura}</div>` : ''}
-        </div>
-        
-        <div style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
-            ${data.tienda ? `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid #e2e8f0;">
-                <span style="color: #64748b; font-size: 13px;">Tienda:</span>
-                <span style="font-weight: 600; color: #1e293b; font-size: 12px; text-align: right; max-width: 60%;">${data.tienda}</span>
-            </div>
-            ` : ''}
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
-                <span style="color: #64748b; font-size: 14px;">Productos detectados</span>
-                <span style="font-size: 24px; font-weight: 700; color: #059669;">${importados}</span>
-            </div>
-            <div style="display: flex; justify-content: space-between;">
-                <span style="color: #64748b; font-size: 14px;">Total unidades</span>
-                <span style="font-size: 24px; font-weight: 700; color: #1e293b;">${totalUnidades}</span>
-            </div>
-        </div>
-        
-        ${noEncontrados.length > 0 ? `
-        <div style="background: #fef2f2; border-left: 3px solid #ef4444; border-radius: 6px; padding: 12px; margin-bottom: 15px;">
-            <div style="font-weight: 700; color: #991b1b; margin-bottom: 8px;">⚠️ Productos no encontrados en catálogo:</div>
-            ${noEncontrados.slice(0, 5).map(sku => `
-                <div style="font-size: 12px; color: #7f1d1d;">• SKU ${sku}</div>
-            `).join('')}
-            ${noEncontrados.length > 5 ? `<div style="font-size: 12px; color: #7f1d1d;">... y ${noEncontrados.length - 5} más</div>` : ''}
-        </div>
-        ` : ''}
-        
-        <button class="btn-cta" onclick="iniciarRecepcionGuia()" style="width: 100%;">
-            📋 Iniciar Recepción →
-        </button>
-    `;
-    
-    // Guardar datos en variable global
-    window.tempRecepcionData = {
-        productos: data.productos,
-        numeroGuia: data.numeroFactura,
-        numeroFactura: data.numeroFactura,
-        fechaFactura: data.fechaFactura,
-        fechaOrden: data.fechaOrden,
-        folio: data.folio,
-        tienda: data.tienda
-    };
-    
-    modalContent.innerHTML = html;
-    modal.classList.add('active');
-}
-        // ============================================
-        // RENDER PRODUCTS
-        // ============================================
-        function renderProducts() {
-            const container = document.getElementById('productsContainer');
-            const ctaContainer = document.getElementById('ctaContainer');
-            const docContainer = document.getElementById('docInputContainer');
-            
-            if(!container) return;
-
-            ctaContainer.innerHTML = ''; 
-            docContainer.innerHTML = '';
-
-            let filtered = rawProducts.filter(p => {
-                if (searchTerm) {
-                    const term = searchTerm;
-                    const matchesName = p.name.toLowerCase().includes(term);
-                    const matchesSku = p.sku.includes(term);
-                    const matchesBrand = p.brand.toLowerCase().includes(term);
-                    const matchesOrigin = p.origin ? p.origin.toLowerCase().includes(term) : false;
-                    
-                    if (!matchesName && !matchesSku && !matchesBrand && !matchesOrigin) return false;
-                }
-                
-if (mainView === 'catalog') {
-    // Filtro por categoría
-    if (currentCategory !== 'Todos') {
-        if (currentCategory === 'Otros') {
-            if (p.category) return false;
-        } else {
-            if (p.category !== currentCategory) return false;
-        }
-    }
-    
-    // Filtro por marca
-    if (currentBrand !== 'Todas') {
-        if (p.brand !== currentBrand) return false;
-    }
-}
-                return true;
-            });
-
-            if (filtered.length === 0) {
-                container.innerHTML = '<div class="empty-state">No se encontraron productos</div>';
-                return;
-            }
-
-            if (mainView === 'stock' && stockMode === 'reception') {
-                docContainer.innerHTML = `
-                <div class="doc-input-container">
-                    <span style="font-weight:600; font-size:13px; color:#1e293b;">N° Guía:</span>
-                    <input type="text" id="docNumberInput" class="doc-input" placeholder="Ej: 123456" value="${currentDocNumber}" onchange="updateDocNumber(this.value)">
-                </div>`;
-            }
-
-            if (mainView === 'stock') {
-                let btnText = "";
-                let modeLabel = "";
-                if (stockMode === 'count') { btnText = "Finalizar Conteo"; modeLabel="Conteo"; }
-                if (stockMode === 'reception') { btnText = "Finalizar Recepción"; modeLabel="Recepción"; }
-                if (stockMode === 'suggestion') { btnText = "Finalizar Sugerido"; modeLabel="Sugerido"; }
-                
-                if(btnText) {
-                    ctaContainer.innerHTML = `
-                        <button class="btn-cta" onclick="openShareModal('${modeLabel}')">
-                            ${btnText}
-                        </button>
-                    `;
-                    
-                    if (stockMode === 'reception' && currentDocNumber) {
-                        ctaContainer.innerHTML += `
-                            <button class="btn-cta secondary" onclick="exportarRecepcionCompleta('${currentDocNumber}')" style="margin-top: 10px;">
-                                📊 Exportar a Excel
-                            </button>
-                        `;
-                    }
-                }
-            }
-
-            container.innerHTML = filtered.map(p => {
-                const qtyCount = dataCount[p.sku] || 0;
-                const qtyRecep = dataReception[p.sku] || 0;
-                const qtySugg = dataSuggestion[p.sku] || 0;
-
-                let controls = '';
-                let borderClass = '';
-                let displayVal = 0;
-
-                if (mainView === 'stock') {
-                    let currentModeClass = '';
-                    if (stockMode === 'count') {
-                        displayVal = qtyCount;
-                        currentModeClass = 'count-mode';
-                        if(qtyCount > 0) borderClass = 'counted';
-                    } else if (stockMode === 'reception') {
-                        displayVal = qtyRecep;
-                        currentModeClass = 'reception-mode';
-                        if(qtyRecep > 0) borderClass = 'reception-counted';
-                    } else if (stockMode === 'suggestion') {
-                        displayVal = qtySugg;
-                        currentModeClass = 'suggestion-mode';
-                        if(qtySugg > 0) borderClass = 'suggestion-counted';
-                    }
-
-                    controls = `
-                        <div class="stock-control ${currentModeClass}" onclick="event.stopPropagation()">
-                            <button class="btn-stock" onclick="modifyStock('${p.sku}', -1)">-</button>
-                            <input class="stock-input" value="${displayVal}" readonly>
-                            <button class="btn-stock" onclick="modifyStock('${p.sku}', 1)">+</button>
-                        </div>
-                    `;
-                } else {
-                    controls = `<div class="catalog-display">${qtyCount} un.</div>`;
-                }
-
-                return `
-                    <div class="product-card ${borderClass}" onclick="openDetail('${p.sku}')">
-                        <div class="product-info">
-                            <h4>${p.name}</h4>
-                            <div class="product-sku">SKU: ${p.sku}</div>
-                        </div>
-                        ${controls}
-                    </div>
-                `;
-            }).join('');
-        }
-
-        // ============================================
-        // LOGIC
-        // ============================================
-        function updateDocNumber(val) {
-            currentDocNumber = val;
-            saveData();
-        }
-
-        function modifyStock(sku, delta) {
-            let db;
-            if (stockMode === 'count') db = dataCount;
-            else if (stockMode === 'reception') db = dataReception;
-            else if (stockMode === 'suggestion') db = dataSuggestion;
-            
-            const current = db[sku] || 0;
-            const newVal = Math.max(0, current + delta);
-            db[sku] = newVal;
-            
-            saveData();
-            renderProducts(); 
-        }
-
-        // ============================================
-        // SHARE MODAL & EXPORT
-        // ============================================
-        function openShareModal(type) {
-            shareTypeTemp = type;
-            document.getElementById('shareModalTitle').textContent = `Compartir ${type}`;
-            document.getElementById('shareModal').classList.add('active');
-        }
-        
-        function closeShareModal() {
-            document.getElementById('shareModal').classList.remove('active');
-        }
-
-        function executeShare(method) {
-            const type = shareTypeTemp;
-            closeShareModal();
-            
-            let db;
-            let docInfo = "";
-            if (type === 'Conteo') db = dataCount;
-            else if (type === 'Recepción') { 
-                db = dataReception; 
-                if(currentDocNumber) docInfo = `\n*Documento:* ${currentDocNumber}`;
-            }
-            else if (type === 'Sugerido') db = dataSuggestion;
-
-            let text = `*Reporte ${type} - ${selectedDateKey}*${docInfo}\n\n`;
-            let bodyEmail = `Reporte ${type} - ${selectedDateKey} ${docInfo}%0D%0A%0D%0A`;
-            
-            let hasItems = false;
-            
-            rawProducts.forEach(p => {
-                const val = db[p.sku] || 0;
-                if(val > 0) {
-                    text += `- ${p.name}: ${val}\n`;
-                    bodyEmail += `- ${p.name}: ${val}%0D%0A`;
-                    hasItems = true;
-                }
-            });
-
-            if (!hasItems) { showToast("No hay items para enviar"); return; }
-            
-            const hist = JSON.parse(localStorage.getItem('appHistory') || '[]');
-            let label = type;
-            if (type === 'Recepción' && currentDocNumber) label += ` #${currentDocNumber}`;
-            
-            hist.push({ 
-                date: selectedDateKey, 
-                type: label, 
-                timestamp: new Date().toISOString(),
-                docNum: currentDocNumber 
-            });
-            localStorage.setItem('appHistory', JSON.stringify(hist));
-
-            if (method === 'whatsapp') {
-                window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, '_blank');
-            } else if (method === 'email') {
-                window.open(`mailto:?subject=Reporte ${type} ${selectedDateKey}&body=${bodyEmail}`, '_blank');
-            }
-        }
-        
-        function renderHistory() {
-            const hist = JSON.parse(localStorage.getItem('appHistory') || '[]');
-            const container = document.getElementById('historyContent');
-            if(hist.length === 0) { container.innerHTML = '<div class="empty-state">Sin registros aún</div>'; return; }
-            container.innerHTML = hist.reverse().map(h => `
-                <div class="history-item">
-                    <div>
-                        <div style="color:#333; font-weight:600; margin-bottom:4px;">${h.type}</div>
-                        <div style="font-size:12px; color:#888;">${new Date(h.timestamp).toLocaleString()}</div>
-                    </div>
-                </div>
-            `).join('');
-        }
-
-        // ============================================
-        // OVERLAY
-        // ============================================
-        function openDetail(sku) {
-            const p = rawProducts.find(x => x.sku === sku);
-            if(!p) return;
-            activeDetailSku = sku;
-            
-            document.getElementById('dBrand').innerText = p.brand;
-            document.getElementById('dName').innerText = p.name;
-            document.getElementById('dSku').innerText = p.sku;
-            document.getElementById('dDesc').innerText = p.description || 'Sin descripción disponible.';
-            
-            const imgEl = document.getElementById('dImg');
-            const ph = document.getElementById('dPlace');
-            
-            if(p.image) {
-                imgEl.src = p.image; imgEl.style.display = 'block'; ph.style.display = 'none';
-            } else {
-                imgEl.style.display = 'none'; ph.style.display = 'block';
-            }
-            
-            const originEl = document.getElementById('dOrigin');
-            if (p.origin) {
-                originEl.textContent = p.origin;
-                originEl.style.display = 'inline-block';
-            } else {
-                originEl.style.display = 'none';
-            }
-
-            document.getElementById('productOverlay').classList.add('active');
-        }
-
-        function closeOverlay() {
-            document.getElementById('productOverlay').classList.remove('active');
-        }
-
-        function setupOverlaySwipe() {
-            const card = document.getElementById('detailCard');
-            card.addEventListener('touchstart', e => { swipeStartX = e.changedTouches[0].screenX; }, {passive: true});
-            card.addEventListener('touchend', e => {
-                const endX = e.changedTouches[0].screenX;
-                if (swipeStartX - endX > 50) navigateDetail(1); 
-                if (endX - swipeStartX > 50) navigateDetail(-1); 
-            }, {passive: true});
-        }
-
-        function navigateDetail(dir) {
-            const idx = rawProducts.findIndex(p => p.sku === activeDetailSku);
-            if(idx === -1) return;
-            let nextIdx = idx + dir;
-            if(nextIdx >= rawProducts.length) nextIdx = 0;
-            if(nextIdx < 0) nextIdx = rawProducts.length - 1;
-            openDetail(rawProducts[nextIdx].sku);
-        }
-
-        // ============================================
-        // UTILS
-        // ============================================
-// ============================================
-// BÚSQUEDA INTELIGENTE
-// ============================================
-function handleSearchInput(el) {
-    searchTerm = el.value.toLowerCase().trim();
-    document.querySelector('.clear-search').style.display = searchTerm ? 'block' : 'none';
-    
-    if (searchTerm.length >= 2) {
-        generateSuggestions();
-        showSuggestions();
-    } else {
-        hideSuggestions();
-    }
-    
-    renderProducts();
-}
-
-function generateSuggestions() {
-    const suggestions = [];
-    const term = searchTerm;
-    
-    // Búsqueda en productos
-    rawProducts.forEach(p => {
-        let matchType = '';
-        let matchValue = '';
-        
-        if (p.sku.toLowerCase().includes(term)) {
-            matchType = 'SKU';
-            matchValue = p.sku;
-        } else if (p.name.toLowerCase().includes(term)) {
-            matchType = 'Producto';
-            matchValue = p.name;
-        } else if (p.brand && p.brand.toLowerCase().includes(term)) {
-            matchType = 'Marca';
-            matchValue = p.brand;
-        } else if (p.origin && p.origin.toLowerCase().includes(term)) {
-            matchType = 'Origen';
-            matchValue = p.origin;
-        }
-        
-        if (matchType) {
-            suggestions.push({
-                type: matchType,
-                value: matchValue,
-                product: p,
-                priority: matchType === 'SKU' ? 1 : matchType === 'Producto' ? 2 : 3
-            });
-        }
-    });
-    
-    // Ordenar por prioridad y limitar
-    searchSuggestions = suggestions
-        .sort((a, b) => a.priority - b.priority)
-        .slice(0, 8);
-}
-
-function showSuggestions() {
-    const container = document.getElementById('searchSuggestions');
-    if (!container) return;
-    
-    if (searchSuggestions.length === 0 && searchTerm.length >= 2) {
-        container.innerHTML = '<div class="no-results">No se encontraron resultados</div>';
-        container.classList.add('active');
-        return;
-    }
-    
-    if (searchSuggestions.length === 0) {
-        // Mostrar historial si no hay búsqueda
-        if (searchHistory.length > 0) {
-            let html = `
-                <div class="suggestion-header">
+            <div class="suggestion-header">
                     Búsquedas recientes
                     <span class="clear-history" onclick="clearSearchHistory()">Limpiar</span>
                 </div>
@@ -2850,6 +2200,99 @@ async function finalizarRecepcionConFirma() {
         renderProducts();
     }, 1000);
 }
+}
     </script>
+
+    <!-- ========================================
+         MODALES: FIRMA Y EXPORTACIÓN
+         ======================================== -->
+
+    <!-- MODAL: FIRMA DIGITAL -->
+    <div id="signatureModal" class="modal">
+        <div class="modal-content signature-modal-content">
+            <div class="modal-header">
+                <h2>🖊️ FIRMA DE CONTEO</h2>
+                <button class="modal-close" onclick="signatureExportModule.closeSignatureModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="signerName">Nombre completo <span class="required">*</span></label>
+                    <input 
+                        type="text" 
+                        id="signerName" 
+                        placeholder="Ingresa tu nombre" 
+                        class="form-input"
+                        autocomplete="off"
+                    />
+                </div>
+
+                <div class="form-group">
+                    <label for="signatureCanvas">Firma <span class="required">*</span></label>
+                    <div class="signature-container">
+                        <canvas id="signatureCanvas" class="signature-canvas"></canvas>
+                    </div>
+                    <small style="display: block; margin-top: 8px; color: #666;">
+                        👆 Dibuja tu firma arriba con el dedo o ratón
+                    </small>
+                </div>
+
+                <button class="btn btn-secondary" onclick="signatureExportModule.clearSignature()">
+                    🔄 Limpiar firma
+                </button>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="signatureExportModule.closeSignatureModal()">
+                    Cancelar
+                </button>
+                <button class="btn btn-primary" onclick="signatureExportModule.validateAndSaveSignature()">
+                    ✅ Generar Reportes
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: OPCIONES DE EXPORTACIÓN -->
+    <div id="exportOptionsModal" class="modal">
+        <div class="modal-content export-modal-content">
+            <div class="modal-header">
+                <h2>✅ CONTEO COMPLETADO Y FIRMADO</h2>
+                <button class="modal-close" onclick="signatureExportModule.closeExportOptions()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="signer-info">
+                    <strong>Por:</strong> <span id="displaySignerName"></span>
+                </div>
+
+                <div class="export-options">
+                    <button class="btn btn-export btn-excel" onclick="signatureExportModule.exportarConteoExcel()">
+                        📊 Descargar Excel Completo
+                    </button>
+                    <button class="btn btn-export btn-pdf" onclick="signatureExportModule.exportarConteoPDF()">
+                        📄 Descargar PDF Firmado
+                    </button>
+                    <button class="btn btn-export btn-whatsapp" onclick="signatureExportModule.shareViaWhatsApp()">
+                        📱 Enviar por WhatsApp
+                    </button>
+                    <button class="btn btn-export btn-email" onclick="signatureExportModule.shareViaEmail()">
+                        📧 Enviar por Email
+                    </button>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="signatureExportModule.closeExportOptions()">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CARGAR LIBRERÍAS Y MÓDULOS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <script src="signature-export.js"></script>
+
 </body>
 </html>
