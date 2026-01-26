@@ -1045,10 +1045,9 @@ let filterExpanded = null; // 'category' | 'brand' | null
             <div class="header-control">
                 <input type="text" id="guideNumber" placeholder="Guía" style="background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 10px; border-radius: 6px; font-size: 13px;" onfocus="showGuideSuggestions()" oninput="filterGuideSuggestions(this.value)" onchange="saveData()">
             </div>
-            <button class="header-icon-btn" onclick="triggerCamera()" title="Escanear">
+            <button class="header-icon-btn" onclick="confirmarReiniciar()" title="Reiniciar">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
             </button>
             <button class="header-icon-btn" onclick="document.getElementById('importGuidaPDF').click()" title="Cargar Guía PDF">
@@ -1421,8 +1420,40 @@ function mostrarInstruccionEscaneo() {
     modal.classList.add('active');
 }
 
-function triggerCamera() {
-    document.getElementById('scanInput').click();
+function confirmarReiniciar() {
+    const viewProducts = document.getElementById('view-products');
+    const viewHistory = document.getElementById('view-history');
+    
+    // Si estamos en historial, no permitir
+    if (viewHistory && viewHistory.style.display !== 'none') {
+        alert('⚠️ No se puede reiniciar desde el Historial');
+        return;
+    }
+    
+    // Determinar si es recepción o inventario mirando el contenido
+    const esRecepcion = document.getElementById('docNumberInput') && 
+                        document.getElementById('docNumberInput').value !== '';
+    
+    const mensaje = esRecepcion 
+        ? '¿Reiniciar la recepción actual?' 
+        : '¿Reiniciar el inventario actual?';
+    
+    if (confirm(mensaje + '\n\nEsto borrará todos los datos ingresados.')) {
+        // Limpiar datos
+        dataReception = {};
+        dataInventory = {};
+        currentDocNumber = '';
+        document.getElementById('guideNumber').value = '';
+        if (document.getElementById('docNumberInput')) {
+            document.getElementById('docNumberInput').value = '';
+        }
+        
+        // Reiniciar UI
+        renderProducts();
+        saveData();
+        
+        showToast('✅ Datos reiniciados');
+    }
 }
 
 function abrirCamaraPaso1() {
@@ -3322,10 +3353,19 @@ function setupSearch() {
                             body: JSON.stringify({ image: imageBase64 })
                         });
                         
-                        const result = await response.json();
+                        let result;
+                        try {
+                            result = await response.json();
+                        } catch (parseError) {
+                            console.error('Error parseando JSON:', parseError);
+                            const responseText = await response.text();
+                            console.error('Respuesta recibida:', responseText.substring(0, 200));
+                            showToast('❌ Error en respuesta de servidor. Intenta de nuevo.');
+                            return;
+                        }
                         
-                        if (!result.success) {
-                            showToast('❌ ' + result.error);
+                        if (!result || !result.success) {
+                            showToast('❌ ' + (result?.error || 'Error desconocido'));
                             return;
                         }
                         
@@ -3365,10 +3405,15 @@ function setupSearch() {
             try {
                 // Cargar PDF.js si no está disponible
                 if (!window.pdfjsLib) {
-                    await cargarPDFJS();
+                    try {
+                        await cargarPDFJS();
+                    } catch (loadError) {
+                        console.warn('⚠️ PDF.js no disponible, usando fallback...');
+                        return await convertirPDFconFallback(pdfArrayBuffer);
+                    }
                 }
                 
-                console.log('📄 Cargando PDF...');
+                console.log('📄 Cargando PDF con PDF.js...');
                 const pdf = await window.pdfjsLib.getDocument({data: pdfArrayBuffer}).promise;
                 const page = await pdf.getPage(1);
                 
@@ -3395,9 +3440,34 @@ function setupSearch() {
                 
                 return canvas;
             } catch (error) {
-                console.error('❌ Error convirtiendo PDF:', error);
-                throw error;
+                console.error('❌ Error con PDF.js:', error);
+                try {
+                    console.log('📄 Intentando fallback...');
+                    return await convertirPDFconFallback(pdfArrayBuffer);
+                } catch (fallbackError) {
+                    console.error('❌ Fallback también falló:', fallbackError);
+                    throw fallbackError;
+                }
             }
+        }
+        
+        async function convertirPDFconFallback(pdfArrayBuffer) {
+            // Crear un canvas blanco como fallback
+            // En producción, aquí iría una API externa como PDF2Pic o similiar
+            const canvas = document.createElement('canvas');
+            canvas.width = 1200;
+            canvas.height = 1600;
+            
+            const context = canvas.getContext('2d');
+            context.fillStyle = '#ffffff';
+            context.fillRect(0, 0, canvas.width, canvas.height);
+            
+            context.fillStyle = '#000000';
+            context.font = '20px Arial';
+            context.fillText('❌ No se pudo procesar el PDF', 50, 100);
+            context.fillText('Por favor, intenta con una foto de la guía', 50, 150);
+            
+            throw new Error('PDF.js no disponible. Usa una foto de la guía en su lugar.');
         }
         
         async function cargarPDFJS() {
@@ -3408,26 +3478,53 @@ function setupSearch() {
                     return;
                 }
                 
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.269/pdf.min.js';
-                script.crossOrigin = 'anonymous';
-                script.onload = () => {
-                    try {
-                        // Esperar a que pdfjsLib esté disponible
-                        setTimeout(() => {
-                            if (window.pdfjsLib) {
-                                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.269/pdf.worker.min.js';
-                                resolve();
-                            } else {
-                                reject(new Error('pdfjsLib no disponible después de cargar script'));
-                            }
-                        }, 100);
-                    } catch (e) {
-                        reject(e);
+                // Intentar con diferentes CDNs (usando versiones que SÍ existen)
+                const cdnUrls = [
+                    'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js',
+                    'https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js',
+                    'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'
+                ];
+                
+                let intentoActual = 0;
+                
+                const cargarDelCDN = () => {
+                    if (intentoActual >= cdnUrls.length) {
+                        reject(new Error('No se pudo cargar PDF.js desde ningún CDN'));
+                        return;
                     }
+                    
+                    const script = document.createElement('script');
+                    script.src = cdnUrls[intentoActual];
+                    script.crossOrigin = 'anonymous';
+                    
+                    script.onload = () => {
+                        try {
+                            setTimeout(() => {
+                                if (window.pdfjsLib) {
+                                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = cdnUrls[intentoActual].replace('pdf.min.js', 'pdf.worker.min.js');
+                                    console.log('✅ PDF.js cargado desde:', cdnUrls[intentoActual]);
+                                    resolve();
+                                } else {
+                                    intentoActual++;
+                                    cargarDelCDN();
+                                }
+                            }, 100);
+                        } catch (e) {
+                            intentoActual++;
+                            cargarDelCDN();
+                        }
+                    };
+                    
+                    script.onerror = () => {
+                        console.warn('⚠️ CDN falló:', cdnUrls[intentoActual]);
+                        intentoActual++;
+                        cargarDelCDN();
+                    };
+                    
+                    document.head.appendChild(script);
                 };
-                script.onerror = () => reject(new Error('No se pudo cargar PDF.js desde CDN'));
-                document.head.appendChild(script);
+                
+                cargarDelCDN();
             });
         }
         
