@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Inventario Coquinaria</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js"></script>
 
     <link rel="manifest" href="/manifest.json">
     <meta name="theme-color" content="#4a0404">
@@ -45,7 +45,7 @@
             background-color: var(--body-bg);
             color: var(--text-primary);
             min-height: 100vh;
-            padding-top: 240px;
+            padding-top: 200px;
             padding-bottom: 90px; 
             font-weight: 400;
             overflow-x: hidden;
@@ -65,9 +65,13 @@
             box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
         .header-logo { font-family: 'Inter', sans-serif; font-size: 16px; font-weight: 200; color: white; letter-spacing: 2px; text-transform: uppercase; }
-        .header-actions { display: flex; flex-direction: column; align-items: flex-end; color: rgba(255, 255, 255, 0.95); }
-        .header-date { font-size: 13px; font-weight: 500; cursor: pointer; display: flex; align-items: center; gap: 5px; background: rgba(255,255,255,0.15); padding: 4px 10px; border-radius: 6px; }
-        #lastSavedIndicator { font-size: 10px; opacity: 0.8; margin-top: 3px; font-weight: 300; }
+        .header-actions { display: flex; flex-direction: row; align-items: center; color: rgba(255, 255, 255, 0.95); gap: 4px; }
+        .header-control { display: flex; align-items: center; gap: 4px; }
+        .header-control input[type="date"] { background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 10px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+        .header-control input[type="date"]::-webkit-calendar-picker-indicator { filter: invert(1); }
+        .header-icon-btn { background: none; border: none; color: white; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; transition: all 0.2s; }
+        .header-icon-btn:hover { opacity: 0.8; transform: scale(1.1); }
+        .header-icon-btn svg { width: 22px; height: 22px; stroke-width: 2; }
         .progress-line { position: absolute; bottom: 0; left: 0; right: 0; height: 3px; background: rgba(255,255,255,0.1); }
         .progress-fill { height: 100%; background: #4ade80; width: 0%; transition: width 0.5s; }
 
@@ -99,6 +103,7 @@
 
         .menu-chip { display: inline-flex; align-items: center; gap: 6px; background: white; border: 1px solid var(--border-light); padding: 8px 16px; border-radius: 12px; font-size: 13px; font-weight: 500; color: var(--text-secondary); white-space: nowrap; cursor: pointer; transition: all 0.2s; box-shadow: 0 1px 2px rgba(0,0,0,0.03); flex-shrink: 0; height: 38px; }
         .menu-chip.active { background: var(--text-rosa-palo); color: white; border-color: var(--text-rosa-palo); box-shadow: 0 4px 10px rgba(184, 92, 103, 0.3); font-weight: 600; }
+        .menu-chip.completed { color: #10b981; font-weight: 600; }
         /* Colores Específicos */
         .menu-chip.count-active { background: var(--pantone-7747c); color: white; border-color: var(--pantone-7747c); box-shadow: 0 4px 10px rgba(47, 92, 57, 0.3); }
         .menu-chip.recep-active { background: var(--pantone-131c); color: white; border-color: var(--pantone-131c); box-shadow: 0 4px 10px rgba(204, 138, 0, 0.3); }
@@ -106,6 +111,10 @@
         
         .menu-chip svg { width: 16px; height: 16px; stroke-width: 2; }
         .menu-chip:active { transform: scale(0.97); }
+        
+        .btn-finalizar-marca { background: #10b981; color: white; border: none; padding: 8px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; white-space: nowrap; height: 38px; transition: all 0.2s; box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3); flex-shrink: 0; margin-left: 8px; }
+        .btn-finalizar-marca:hover { background: #059669; box-shadow: 0 6px 15px rgba(16, 185, 129, 0.4); }
+        .btn-finalizar-marca:active { transform: scale(0.95); }
 
         /* LISTA */
         .products-list { padding: 0 20px; }
@@ -153,7 +162,7 @@
         .product-overlay.active { opacity: 1; pointer-events: auto; }
         .detail-card { background: white; width: 90%; max-width: 400px; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); transform: scale(0.95); transition: transform 0.2s; max-height: 85vh; display: flex; flex-direction: column; }
         .product-overlay.active .detail-card { transform: scale(1); }
-        .detail-image-box { width: 100%; height: 260px; background: #fff; display: flex; align-items: center; justify-content: center; position: relative; border-bottom: 1px solid #f1f5f9; }
+        .detail-image-box { display: none; }
         .detail-img { width: 100%; height: 100%; object-fit: contain; padding: 20px; }
         .detail-placeholder { font-size: 50px; opacity: 0.1; }
         .detail-content { padding: 25px; overflow-y: auto; }
@@ -372,16 +381,14 @@
     <input type="file" id="fileImport" accept=".csv,.txt" style="display:none" onchange="handleFileImport(this)">
     <input type="file" id="scanInput" accept="image/*" capture="environment" onchange="handleScan(this)">
     <input type="file" id="importExcelInput" accept=".xlsx,.xls" style="display:none" onchange="importarExcelRecepcion(this.files[0])">
+    <input type="file" id="importInventoryExcel" accept=".xlsx,.xls" style="display:none" onchange="importarExcelInventario(this.files[0])">
+    <input type="file" id="importReceptionExcel" accept=".xlsx,.xls" style="display:none" onchange="importarExcelRecepcion(this.files[0])">
     
     <!-- HEADER -->
     <div class="header">
         <div class="header-logo">COQUINARIA</div>
-        <div class="header-actions">
-            <div class="header-date" onclick="openDate()">
-                <span id="dateDisplay">--/--</span>
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>
-            </div>
-            <div id="lastSavedIndicator">Guardado</div>
+        <div class="header-actions" id="headerActions">
+            <!-- Se llena dinámicamente según la vista -->
         </div>
         <input type="date" id="dateInput">
         <div class="progress-line"><div class="progress-fill" id="progressBar"></div></div>
@@ -398,7 +405,7 @@
                 <button class="clear-search" onclick="clearSearch()">✕</button>
                 
                 <!-- SUGGESTIONS DROPDOWN -->
-                <div class="search-suggestions" id="searchSuggestions" style="display:none;"></div>
+                <div class="search-suggestions" id="searchSuggestions"></div>
             </div>
         </div>
         
@@ -434,7 +441,6 @@
             <button class="close-btn" onclick="closeOverlay()">✕</button>
             <div class="detail-image-box">
                 <img id="dImg" class="detail-img" src="" style="display:none">
-                <div id="dPlace" class="detail-placeholder">📷</div>
             </div>
             <div class="detail-content">
                 <div style="display:flex; align-items:center; margin-bottom:5px;">
@@ -466,15 +472,27 @@
         </div>
     </div>
 
+    <!-- FIRMA MODAL (EXCLUSIVO) -->
+    <div id="firmaModal" class="modal">
+        <div class="modal-content">
+            <h3 class="modal-title">Finalizar Conteo</h3>
+            <div id="firmaModalContent"></div>
+        </div>
+    </div>
+
     <!-- BOTTOM NAV -->
     <div class="bottom-nav">
         <button class="nav-item active" id="nav-catalog" onclick="switchMainView('catalog')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" /></svg>
             <span>Catálogo</span>
         </button>
-        <button class="nav-item" id="nav-stock" onclick="switchMainView('stock')">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" /></svg>
-            <span>Stock</span>
+        <button class="nav-item" id="nav-inventory" onclick="switchMainView('inventory')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" /></svg>
+            <span>Inventario</span>
+        </button>
+        <button class="nav-item" id="nav-reception" onclick="switchMainView('reception')">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" /></svg>
+            <span>Recepción</span>
         </button>
         <button class="nav-item" id="nav-history" onclick="switchMainView('history')">
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
@@ -928,7 +946,8 @@ let filterExpanded = null; // 'category' | 'brand' | null
 
         function updateDateDisplay(dateStr) {
             const parts = dateStr.split('-');
-            document.querySelector('.header-date span').textContent = `${parts[2]}/${parts[1]}`;
+            const el = document.querySelector('.header-date span');
+            if (el) el.textContent = `${parts[2]}/${parts[1]}`;
         }
         function openDate() { document.getElementById('dateInput').showPicker(); }
 
@@ -942,8 +961,14 @@ let filterExpanded = null; // 'category' | 'brand' | null
                 dataSuggestion = JSON.parse(localStorage.getItem(`inv_sugg_${selectedDateKey}`)) || {};
                 const savedDoc = localStorage.getItem(`inv_recep_doc_${selectedDateKey}`);
                 if(savedDoc) currentDocNumber = savedDoc;
+                
+                // Cargar estados de marcas por vista
+                window.brandStatusInventory = JSON.parse(localStorage.getItem(`brand_status_inv_${selectedDateKey}`)) || {};
+                window.brandStatusReception = JSON.parse(localStorage.getItem(`brand_status_recep_${selectedDateKey}`)) || {};
             } catch (e) {
                 dataCount = {}; dataReception = {}; dataSuggestion = {};
+                window.brandStatusInventory = {};
+                window.brandStatusReception = {};
             }
         }
 
@@ -952,7 +977,21 @@ let filterExpanded = null; // 'category' | 'brand' | null
             localStorage.setItem(`inv_recep_${selectedDateKey}`, JSON.stringify(dataReception));
             localStorage.setItem(`inv_sugg_${selectedDateKey}`, JSON.stringify(dataSuggestion));
             if(stockMode === 'reception') localStorage.setItem(`inv_recep_doc_${selectedDateKey}`, currentDocNumber);
-            document.getElementById('lastSavedIndicator').textContent = 'Guardado ' + new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'});
+            
+            // Guardar estados de marcas por vista
+            if (window.brandStatusInventory) localStorage.setItem(`brand_status_inv_${selectedDateKey}`, JSON.stringify(window.brandStatusInventory));
+            if (window.brandStatusReception) localStorage.setItem(`brand_status_recep_${selectedDateKey}`, JSON.stringify(window.brandStatusReception));
+        }
+
+        function updateInventoryDate() {
+            const today = new Date();
+            const day = String(today.getDate()).padStart(2, '0');
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const year = today.getFullYear();
+            const dateDisplay = document.getElementById('dateDisplay');
+            if (dateDisplay) {
+                dateDisplay.textContent = `${day}/${month}/${year}`;
+            }
         }
 
         // ============================================
@@ -960,31 +999,69 @@ let filterExpanded = null; // 'category' | 'brand' | null
         // ============================================
        function switchMainView(view) {
     mainView = view;
-    filterExpanded = null; // 👈 Resetear filtros expandidos
+    filterExpanded = null;
+    currentBrand = 'Todas'; // Reset brand filter
     
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     document.getElementById(`nav-${view}`).classList.add('active');
     
     const prodView = document.getElementById('view-products');
     const histView = document.getElementById('view-history');
+    const headerActions = document.getElementById('headerActions');
+    
+    // Actualizar header según la vista
+    if (view === 'inventory') {
+        headerActions.innerHTML = `
+            <div class="header-control" id="dateDisplay" style="background: rgba(255,255,255,0.15); padding: 6px 10px; border-radius: 6px; font-size: 13px;">
+                26/01
+            </div>
+            <button class="header-icon-btn" onclick="document.getElementById('importInventoryExcel').click()" title="Importar">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4" />
+                </svg>
+            </button>
+        `;
+        updateInventoryDate();
+    } else if (view === 'reception') {
+        headerActions.innerHTML = `
+            <div class="header-control">
+                <input type="text" id="guideNumber" placeholder="Guía" style="background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 10px; border-radius: 6px; font-size: 13px;" onfocus="showGuideSuggestions()" oninput="filterGuideSuggestions(this.value)" onchange="saveData()">
+            </div>
+            <button class="header-icon-btn" onclick="triggerCamera()" title="Escanear">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+            </button>
+            <button class="header-icon-btn" onclick="document.getElementById('importReceptionExcel').click()" title="Importar">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4" />
+                </svg>
+            </button>
+        `;
+    } else if (view === 'catalog') {
+        headerActions.innerHTML = '';
+    } else if (view === 'history') {
+        headerActions.innerHTML = '';
+    }
     
     if (view === 'history') {
         prodView.style.display = 'none';
         histView.style.display = 'block';
+        document.getElementById('toolbarMenu').innerHTML = '';
         renderHistory();
     } else {
         prodView.style.display = 'block';
         histView.style.display = 'none';
+        renderBrandFilters(document.getElementById('toolbarMenu'));
     }
-    
-    const toolbar = document.getElementById('toolbarMenu');
-    toolbar.innerHTML = ''; 
 
-    if (view === 'catalog') {
-        renderFilters();
-    } else if (view === 'stock') {
-        renderStockTools(toolbar);
-        // No renderizar filtros en stock
+    if (view === 'inventory') {
+        stockMode = 'count';
+    } else if (view === 'reception') {
+        stockMode = 'reception';
+    } else if (view === 'catalog') {
+        stockMode = null;
     }
     
     renderProducts();
@@ -1068,7 +1145,7 @@ function renderFilters() {
             </div>
         `;
     } else if (filterExpanded === 'brand') {
-        const brands = ['Todas', ...new Set(rawProducts.map(p => p.brand).filter(Boolean).sort())];
+        const brands = ['Todas', ...Array.from(new Set(rawProducts.map(p => p.brand).filter(Boolean))).sort()];
         optionsContainer.innerHTML = `
             <div class="filter-options expanded">
                 <div class="filter-chips">
@@ -1143,6 +1220,97 @@ function renderFilters() {
         function setStockMode(mode) {
             stockMode = mode;
             switchMainView('stock');
+        }
+
+        function renderBrandFilters(container) {
+            if (mainView === 'history') {
+                container.innerHTML = '';
+                return;
+            }
+
+            // Inicializar status por vista
+            if (mainView === 'inventory' && !window.brandStatusInventory) window.brandStatusInventory = {};
+            if (mainView === 'reception' && !window.brandStatusReception) window.brandStatusReception = {};
+            
+            const brands = ['Todas', ...Array.from(new Set(rawProducts.map(p => p.brand).filter(Boolean))).sort()];
+            
+            // Usar el objeto de estado correcto según la vista
+            let statusObj = null;
+            if (mainView === 'inventory') statusObj = window.brandStatusInventory;
+            else if (mainView === 'reception') statusObj = window.brandStatusReception;
+            
+            let html = '';
+            
+            brands.forEach(brand => {
+                const isActive = currentBrand === brand;
+                // Solo mostrar marcas completadas en Inventario y Recepción, NUNCA en Catálogo
+                const isCompleted = brand !== 'Todas' && statusObj && statusObj[brand] && (mainView === 'inventory' || mainView === 'reception');
+                
+                let chipClass = isActive ? 'active' : '';
+                if (isCompleted) chipClass += ' completed';
+                
+                html += `<div class="menu-chip ${chipClass}" onclick="selectBrand('${brand.replace(/'/g, "\\'")}')">${brand}</div>`;
+            });
+            
+            // Mostrar botón Finalizar solo si está en una marca específica (no "Todas") en Inventario o Recepción
+            if (currentBrand !== 'Todas' && (mainView === 'inventory' || mainView === 'reception')) {
+                html += `<button class="btn-finalizar-marca" onclick="finalizarMarca('${currentBrand.replace(/'/g, "\\'")}')"}>Finalizar ${currentBrand}</button>`;
+            }
+            
+            container.innerHTML = html;
+        }
+
+        function selectBrand(brand) {
+            currentBrand = brand;
+            renderProducts();
+            renderBrandFilters(document.getElementById('toolbarMenu'));
+        }
+
+        function finalizarMarca(brand) {
+            let statusObj = null;
+            
+            if (mainView === 'inventory') {
+                if (!window.brandStatusInventory) window.brandStatusInventory = {};
+                statusObj = window.brandStatusInventory;
+            } else if (mainView === 'reception') {
+                if (!window.brandStatusReception) window.brandStatusReception = {};
+                statusObj = window.brandStatusReception;
+            }
+            
+            if (statusObj) {
+                statusObj[brand] = true;
+                saveData();
+            }
+            
+            showToast(`✓ ${brand} completada`);
+            
+            // Ir a la siguiente marca sin completar
+            const brands = ['Todas', ...Array.from(new Set(rawProducts.map(p => p.brand).filter(Boolean))).sort()];
+            const currentIndex = brands.indexOf(brand);
+            
+            let nextBrand = null;
+            for (let i = currentIndex + 1; i < brands.length; i++) {
+                if (!statusObj[brands[i]]) {
+                    nextBrand = brands[i];
+                    break;
+                }
+            }
+            
+            if (!nextBrand) {
+                for (let i = 1; i < currentIndex; i++) {
+                    if (!statusObj[brands[i]]) {
+                        nextBrand = brands[i];
+                        break;
+                    }
+                }
+            }
+            
+            if (nextBrand) {
+                selectBrand(nextBrand);
+            } else {
+                selectBrand('Todas');
+                renderBrandFilters(document.getElementById('toolbarMenu'));
+            }
         }
 
   // ============================================
@@ -1579,11 +1747,11 @@ if (mainView === 'catalog') {
             if (p.category !== currentCategory) return false;
         }
     }
-    
-    // Filtro por marca
-    if (currentBrand !== 'Todas') {
-        if (p.brand !== currentBrand) return false;
-    }
+}
+
+// Filtro por marca en todas las vistas
+if (currentBrand !== 'Todas') {
+    if (p.brand !== currentBrand) return false;
 }
                 return true;
             });
@@ -1593,36 +1761,32 @@ if (mainView === 'catalog') {
                 return;
             }
 
-            if (mainView === 'stock' && stockMode === 'reception') {
-                docContainer.innerHTML = `
-                <div class="doc-input-container">
-                    <span style="font-weight:600; font-size:13px; color:#1e293b;">N° Guía:</span>
-                    <input type="text" id="docNumberInput" class="doc-input" placeholder="Ej: 123456" value="${currentDocNumber}" onchange="updateDocNumber(this.value)">
-                </div>`;
+            if (mainView === 'reception' && stockMode === 'reception') {
+                // N° Guía está en el header, no lo mostramos aquí
             }
 
-            if (mainView === 'stock') {
-                let btnText = "";
-                let modeLabel = "";
-                if (stockMode === 'count') { btnText = "Finalizar Conteo"; modeLabel="Conteo"; }
-                if (stockMode === 'reception') { btnText = "Finalizar Recepción"; modeLabel="Recepción"; }
-                if (stockMode === 'suggestion') { btnText = "Finalizar Sugerido"; modeLabel="Sugerido"; }
-                
-                if(btnText) {
-                    let onclickFn = `openShareModal('${modeLabel}')`;
-                    if (stockMode === 'count') {
-                        onclickFn = `abrirFirmaConteo()`;
-                    }
+            if (mainView === 'inventory' || mainView === 'reception') {
+                // Mostrar botón Finalizar marca cuando se ve una marca específica
+                if (currentBrand !== 'Todas') {
                     ctaContainer.innerHTML = `
-                        <button class="btn-cta" onclick="${onclickFn}">
-                            ${btnText}
+                        <button class="btn-cta" onclick="finalizarMarca('${currentBrand.replace(/'/g, "\\'")}')"}>
+                            Finalizar ${currentBrand}
                         </button>
                     `;
-                    
-                    if (stockMode === 'reception' && currentDocNumber) {
-                        ctaContainer.innerHTML += `
-                            <button class="btn-cta secondary" onclick="exportarRecepcionCompleta('${currentDocNumber}')" style="margin-top: 10px;">
-                                📊 Exportar a Excel
+                }
+                // Mostrar botón Finalizar Todo si estamos en "Todas"
+                else if (currentBrand === 'Todas') {
+                    if (mainView === 'inventory') { 
+                        ctaContainer.innerHTML = `
+                            <button class="btn-cta" onclick="abrirModalFirmaConteo()">
+                                Finalizar Conteo
+                            </button>
+                        `;
+                    }
+                    if (mainView === 'reception') { 
+                        ctaContainer.innerHTML = `
+                            <button class="btn-cta" onclick="abrirModalFirmaRecepcion()">
+                                Finalizar Recepción
                             </button>
                         `;
                     }
@@ -1638,20 +1802,16 @@ if (mainView === 'catalog') {
                 let borderClass = '';
                 let displayVal = 0;
 
-                if (mainView === 'stock') {
+                if (mainView === 'inventory' || mainView === 'reception') {
                     let currentModeClass = '';
-                    if (stockMode === 'count') {
+                    if (mainView === 'inventory') {
                         displayVal = qtyCount;
                         currentModeClass = 'count-mode';
                         if(qtyCount > 0) borderClass = 'counted';
-                    } else if (stockMode === 'reception') {
+                    } else if (mainView === 'reception') {
                         displayVal = qtyRecep;
                         currentModeClass = 'reception-mode';
                         if(qtyRecep > 0) borderClass = 'reception-counted';
-                    } else if (stockMode === 'suggestion') {
-                        displayVal = qtySugg;
-                        currentModeClass = 'suggestion-mode';
-                        if(qtySugg > 0) borderClass = 'suggestion-counted';
                     }
 
                     controls = `
@@ -1662,11 +1822,12 @@ if (mainView === 'catalog') {
                         </div>
                     `;
                 } else {
-                    controls = `<div class="catalog-display">${qtyCount} un.</div>`;
+                    // Catálogo: sin controles ni contador
+                    controls = '';
                 }
 
                 return `
-                    <div class="product-card ${borderClass}" ${mainView === 'catalog' ? `onclick="openDetail('${p.sku}')"` : ''}>
+                    <div class="product-card ${borderClass}" onclick="openDetail('${p.sku}')">
                         <div class="product-info">
                             <h4>${p.name}</h4>
                             <div class="product-sku">SKU: ${p.sku}</div>
@@ -1687,9 +1848,10 @@ if (mainView === 'catalog') {
 
         function modifyStock(sku, delta) {
             let db;
-            if (stockMode === 'count') db = dataCount;
-            else if (stockMode === 'reception') db = dataReception;
-            else if (stockMode === 'suggestion') db = dataSuggestion;
+            if (mainView === 'inventory') db = dataCount;
+            else if (mainView === 'reception') db = dataReception;
+            
+            if (!db) return;
             
             const current = db[sku] || 0;
             const newVal = Math.max(0, current + delta);
@@ -1702,6 +1864,417 @@ if (mainView === 'catalog') {
         // ============================================
         // SHARE MODAL & EXPORT
         // ============================================
+        
+        function abrirModalFirmaConteo() {
+            abrirModalFirma('Conteo');
+        }
+        
+        function abrirModalFirmaRecepcion() {
+            abrirModalFirma('Recepción');
+        }
+        
+        function abrirModalFirma(tipo) {
+            const modal = document.getElementById('firmaModal');
+            const modalContent = document.getElementById('firmaModalContent');
+            
+            modal.querySelector('.modal-title').textContent = `Finalizar ${tipo}`;
+            
+            let html = `
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 13px; color: #64748b; margin-bottom: 8px; font-weight: 500;">Nombre:</label>
+                    <input type="text" id="inputNombre" placeholder="Ej: Juan Pérez" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-size: 13px; color: #64748b; margin-bottom: 8px; font-weight: 500;">Firma:</label>
+                    <canvas id="canvasFirma" style="width: 100%; height: 120px; border: 2px dashed #e2e8f0; border-radius: 8px; background: white; cursor: crosshair; display: block;"></canvas>
+                    <button onclick="limpiarFirma()" style="width: 100%; margin-top: 8px; padding: 8px; border: 1px solid #e2e8f0; background: white; border-radius: 6px; font-size: 13px; color: #64748b; cursor: pointer; font-weight: 500;">
+                        🔄 Limpiar
+                    </button>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 15px;">
+                    <button onclick="generarPDF('${tipo}')" style="flex: 1; padding: 12px; background: #4a0404; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
+                        PDF
+                    </button>
+                    <button onclick="generarExcel('${tipo}')" style="flex: 1; padding: 12px; background: #4a0404; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
+                        Excel
+                    </button>
+                    <button onclick="cerrarFirmaModal()" style="flex: 1; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
+                        Cancelar
+                    </button>
+                </div>
+            `;
+            
+            modalContent.innerHTML = html;
+            modal.classList.add('active');
+            
+            setTimeout(inicializarCanvasFirma, 500);
+        }
+        
+        function cerrarFirmaModal() {
+            document.getElementById('firmaModal').classList.remove('active');
+        }
+        
+        function inicializarCanvasFirma() {
+            console.log('🔄 Intentando inicializar canvas...');
+            
+            const canvas = document.getElementById('canvasFirma');
+            
+            if (!canvas) {
+                console.error('❌ Canvas element no existe en el DOM');
+                console.log('📋 Retentando en 200ms...');
+                setTimeout(inicializarCanvasFirma, 200);
+                return;
+            }
+            
+            console.log('✅ Canvas encontrado');
+            
+            try {
+                const ctx = canvas.getContext('2d');
+                if (!ctx) {
+                    console.error('❌ No se pudo obtener contexto 2D');
+                    return;
+                }
+                
+                canvas.width = canvas.offsetWidth;
+                canvas.height = 120;
+                
+                console.log(`📐 Canvas dimensiones: ${canvas.width}x${canvas.height}`);
+                
+                let dibujando = false;
+                
+                const inicio = (e) => {
+                    dibujando = true;
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+                    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                };
+                
+                const dibujo = (e) => {
+                    if (!dibujando) return;
+                    e.preventDefault?.();
+                    const rect = canvas.getBoundingClientRect();
+                    const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+                    const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+                    ctx.lineTo(x, y);
+                    ctx.strokeStyle = '#1e293b';
+                    ctx.lineWidth = 2;
+                    ctx.lineCap = 'round';
+                    ctx.lineJoin = 'round';
+                    ctx.stroke();
+                };
+                
+                const fin = () => {
+                    dibujando = false;
+                };
+                
+                canvas.addEventListener('mousedown', inicio, false);
+                canvas.addEventListener('mousemove', dibujo, false);
+                canvas.addEventListener('mouseup', fin, false);
+                canvas.addEventListener('mouseout', fin, false);
+                canvas.addEventListener('touchstart', inicio, false);
+                canvas.addEventListener('touchmove', dibujo, false);
+                canvas.addEventListener('touchend', fin, false);
+                
+                console.log('✅ Canvas completamente inicializado y funcional');
+                
+            } catch (e) {
+                console.error('❌ Error al inicializar:', e.message);
+            }
+        }
+        
+        function limpiarFirma() {
+            const canvas = document.getElementById('canvasFirma');
+            if (!canvas) {
+                return;
+            }
+            try {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            } catch (e) {
+                console.log('No se pudo limpiar canvas');
+            }
+        }
+        
+        let conteoActualGuardado = null;
+        
+        function guardarConteoConFirma(tipo, nombre, firmaDataURL) {
+            const hoy = new Date().toISOString().split('T')[0];
+            const id = `${tipo}_${hoy}_${Date.now()}`;
+            
+            const conteo = {
+                id: id,
+                tipo: tipo,
+                fecha: hoy,
+                nombre: nombre,
+                firma: firmaDataURL,
+                datos: tipo === 'Conteo' ? {...dataCount} : {...dataReception},
+                timestamp: new Date().getTime()
+            };
+            
+            let historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            historial.unshift(conteo);
+            localStorage.setItem('historial_conteos', JSON.stringify(historial));
+            
+            conteoActualGuardado = conteo;
+            
+            showToast('✅ Archivo guardado');
+            mostrarModalExportarConteo();
+        }
+        
+        function mostrarModalExportarConteo() {
+            const modal = document.getElementById('firmaModal');
+            const modalContent = document.getElementById('firmaModalContent');
+            
+            let html = `
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <div style="font-size: 24px; color: #059669; margin-bottom: 10px;">✅</div>
+                    <div style="font-size: 18px; font-weight: 600; color: #1e293b;">Archivo guardado correctamente</div>
+                    <div style="font-size: 14px; color: #64748b; margin-top: 5px;">¿Deseas exportarlo ahora?</div>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                    <button onclick="exportarConteoAPDF()" style="flex: 1; padding: 12px; background: #4a0404; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
+                        📄 PDF
+                    </button>
+                    <button onclick="exportarConteoAExcel()" style="flex: 1; padding: 12px; background: #4a0404; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
+                        📊 Excel
+                    </button>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="exportarAmbos()" style="flex: 1; padding: 12px; background: #059669; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
+                        🔄 Ambos
+                    </button>
+                    <button onclick="cerrarFirmaModal()" style="flex: 1; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
+                        ✕ Solo guardar
+                    </button>
+                </div>
+            `;
+            
+            modalContent.innerHTML = html;
+        }
+        
+        
+        function generarPDF(tipo) {
+            const nombre = document.getElementById('inputNombre').value || 'Sin nombre';
+            const canvas = document.getElementById('canvasFirma');
+            
+            if (!canvas) {
+                showToast('❌ Dibuje su firma primero');
+                return;
+            }
+            
+            const firmaDataURL = canvas.toDataURL('image/png');
+            guardarConteoConFirma(tipo, nombre, firmaDataURL);
+        }
+        
+        function generarExcel(tipo) {
+            const nombre = document.getElementById('inputNombre').value || 'Sin nombre';
+            const canvas = document.getElementById('canvasFirma');
+            
+            if (!canvas) {
+                showToast('❌ Dibuje su firma primero');
+                return;
+            }
+            
+            const firmaDataURL = canvas.toDataURL('image/png');
+            guardarConteoConFirma(tipo, nombre, firmaDataURL);
+        }
+        
+        function exportarConteoAPDF() {
+            if (!conteoActualGuardado) {
+                showToast('❌ No hay conteo para exportar');
+                return;
+            }
+            generarPDFDelConteo(conteoActualGuardado);
+            showToast('✅ PDF descargado');
+        }
+        
+        function exportarConteoAExcel() {
+            if (!conteoActualGuardado) {
+                showToast('❌ No hay conteo para exportar');
+                return;
+            }
+            generarExcelDelConteo(conteoActualGuardado);
+            showToast('✅ Excel descargado');
+        }
+        
+        function exportarAmbos() {
+            if (!conteoActualGuardado) {
+                showToast('❌ No hay conteo para exportar');
+                return;
+            }
+            generarPDFDelConteo(conteoActualGuardado);
+            setTimeout(() => {
+                generarExcelDelConteo(conteoActualGuardado);
+                showToast('✅ PDF y Excel descargados');
+            }, 500);
+        }
+        
+        function generarPDFDelConteo(conteo) {
+            if (!window.jspdf) {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+                script.onload = () => {
+                    _generarPDFInterno(conteo);
+                };
+                document.head.appendChild(script);
+            } else {
+                _generarPDFInterno(conteo);
+            }
+        }
+        
+        function _generarPDFInterno(conteo) {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            // Header rojo
+            doc.setFillColor(74, 4, 4);
+            doc.rect(0, 0, 210, 25, 'F');
+            doc.setTextColor(255, 255, 255);
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(20);
+            doc.text('COQUINARIA', 105, 16, { align: 'center' });
+            
+            // Información
+            let y = 35;
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(10);
+            
+            doc.text(`Tipo de documento: ${conteo.tipo}`, 20, y);
+            y += 8;
+            doc.text(`Fecha: ${conteo.fecha}`, 20, y);
+            y += 8;
+            doc.text(`Responsable: ${conteo.nombre}`, 20, y);
+            y += 12;
+            
+            // Tabla de productos
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(9);
+            doc.setFillColor(74, 4, 4);
+            doc.setTextColor(255, 255, 255);
+            doc.rect(20, y - 5, 170, 7, 'F');
+            doc.text('SKU', 22, y);
+            doc.text('Producto', 40, y);
+            doc.text('Cantidad', 170, y);
+            
+            y += 10;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.setTextColor(0, 0, 0);
+            
+            // Productos con cantidad > 0
+            let totalProductos = 0;
+            Object.entries(conteo.datos).forEach(([sku, cantidad]) => {
+                if (cantidad > 0) {
+                    const producto = rawProducts.find(p => p.sku === sku);
+                    const nombre = producto ? producto.name : `Producto ${sku}`;
+                    
+                    doc.text(sku, 22, y);
+                    doc.text(nombre.substring(0, 50), 40, y);
+                    doc.text(cantidad.toString(), 170, y);
+                    
+                    y += 6;
+                    totalProductos++;
+                }
+            });
+            
+            // Total
+            y += 5;
+            doc.setFont('helvetica', 'bold');
+            doc.text(`Total de productos: ${totalProductos}`, 20, y);
+            
+            // Firma
+            y += 20;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text('Firma:', 20, y);
+            
+            if (conteo.firma) {
+                doc.addImage(conteo.firma, 'PNG', 20, y + 5, 50, 20);
+            }
+            
+            doc.save(`Conteo_${conteo.tipo}_${conteo.fecha}_${conteo.nombre.replace(/\\s+/g, '_')}.pdf`);
+        }
+        
+        function generarExcelDelConteo(conteo) {
+            if (!window.ExcelJS) {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.3.0/exceljs.min.js';
+                script.onload = () => {
+                    _generarExcelInterno(conteo);
+                };
+                document.head.appendChild(script);
+            } else {
+                _generarExcelInterno(conteo);
+            }
+        }
+        
+        function _generarExcelInterno(conteo) {
+            const ExcelJS = window.ExcelJS;
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Conteo');
+            
+            // Header
+            worksheet.columns = [
+                { header: 'SKU', key: 'sku', width: 12 },
+                { header: 'Producto', key: 'producto', width: 50 },
+                { header: 'Cantidad', key: 'cantidad', width: 12 }
+            ];
+            
+            // Estilos header
+            const headerRow = worksheet.getRow(1);
+            headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4a0404' } };
+            headerRow.font = { color: { argb: 'FFFFFFFF' }, bold: true };
+            
+            // Datos
+            let rowNum = 2;
+            let totalProductos = 0;
+            
+            Object.entries(conteo.datos).forEach(([sku, cantidad]) => {
+                if (cantidad > 0) {
+                    const producto = rawProducts.find(p => p.sku === sku);
+                    const nombre = producto ? producto.name : `Producto ${sku}`;
+                    
+                    worksheet.addRow({
+                        sku: sku,
+                        producto: nombre,
+                        cantidad: cantidad
+                    });
+                    
+                    rowNum++;
+                    totalProductos++;
+                }
+            });
+            
+            // Total
+            worksheet.addRow({ sku: 'TOTAL', cantidad: totalProductos });
+            const totalRow = worksheet.getRow(rowNum);
+            totalRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFf0f0f0' } };
+            totalRow.font = { bold: true };
+            
+            // Info adicional
+            rowNum += 3;
+            worksheet.getRow(rowNum).values = ['Responsable:', conteo.nombre];
+            worksheet.getRow(rowNum + 1).values = ['Fecha:', conteo.fecha];
+            worksheet.getRow(rowNum + 2).values = ['Tipo:', conteo.tipo];
+            
+            workbook.xlsx.writeBuffer().then(buffer => {
+                const blob = new Blob([buffer], { type: 'application/octet-stream' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = `Conteo_${conteo.tipo}_${conteo.fecha}_${conteo.nombre.replace(/\\s+/g, '_')}.xlsx`;
+                link.click();
+                URL.revokeObjectURL(url);
+            });
+        }
+        
         function openShareModal(type) {
             shareTypeTemp = type;
             document.getElementById('shareModalTitle').textContent = `Compartir ${type}`;
@@ -1761,17 +2334,184 @@ if (mainView === 'catalog') {
         }
         
         function renderHistory() {
-            const hist = JSON.parse(localStorage.getItem('appHistory') || '[]');
+            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
             const container = document.getElementById('historyContent');
-            if(hist.length === 0) { container.innerHTML = '<div class="empty-state">Sin registros aún</div>'; return; }
-            container.innerHTML = hist.reverse().map(h => `
-                <div class="history-item">
+            
+            if (historial.length === 0) {
+                container.innerHTML = '<div class="empty-state">Sin registros aún</div>';
+                return;
+            }
+            
+            container.innerHTML = historial.map(item => `
+                <div style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
                     <div>
-                        <div style="color:#333; font-weight:600; margin-bottom:4px;">${h.type}</div>
-                        <div style="font-size:12px; color:#888;">${new Date(h.timestamp).toLocaleString()}</div>
+                        <div style="font-weight: 600; color: #1e293b; font-size: 14px;">${item.tipo}</div>
+                        <div style="font-size: 12px; color: #64748b; margin-top: 4px;">${item.fecha} • ${item.nombre}</div>
+                    </div>
+                    <div style="display: flex; gap: 8px;">
+                        <button onclick="generarPDFDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;">PDF</button>
+                        <button onclick="generarExcelDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;">Excel</button>
                     </div>
                 </div>
             `).join('');
+        }
+        
+        function generarPDFDesdeHistorial(id) {
+            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            const conteo = historial.find(c => c.id === id);
+            if (!conteo) return;
+            
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF('p', 'mm', 'a4');
+            
+            doc.setFillColor(74, 4, 4);
+            doc.rect(0, 0, 210, 25, 'F');
+            
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(22);
+            doc.setFont('helvetica', 'bold');
+            doc.text('COQUINARIA', 105, 16, { align: 'center' });
+            
+            let y = 35;
+            doc.setTextColor(74, 4, 4);
+            doc.setFontSize(16);
+            doc.setFont('helvetica', 'bold');
+            doc.text(`CIERRE DE ${conteo.tipo.toUpperCase()}`, 105, y, { align: 'center' });
+            
+            y += 12;
+            doc.setTextColor(0, 0, 0);
+            doc.setFontSize(10);
+            doc.setFont('helvetica', 'normal');
+            doc.text(`Fecha: ${conteo.fecha}`, 15, y);
+            
+            y += 7;
+            doc.text(`Responsable: ${conteo.nombre}`, 15, y);
+            
+            y += 12;
+            doc.setFillColor(74, 4, 4);
+            doc.setTextColor(255, 255, 255);
+            doc.setFontSize(9);
+            doc.setFont('helvetica', 'bold');
+            
+            doc.text('SKU', 15, y);
+            doc.text('Producto', 35, y);
+            doc.text('Cantidad', 170, y);
+            
+            y += 6;
+            doc.setDrawColor(74, 4, 4);
+            doc.line(15, y - 1, 200, y - 1);
+            
+            doc.setTextColor(0, 0, 0);
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            
+            let rowCount = 0;
+            rawProducts.forEach(p => {
+                const qty = conteo.datos[p.sku] || 0;
+                if (qty > 0) {
+                    if (y > 250) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                    
+                    doc.text(p.sku, 15, y);
+                    doc.text(p.name.substring(0, 35), 35, y);
+                    doc.text(qty.toString(), 170, y, { align: 'right' });
+                    
+                    y += 6;
+                    rowCount++;
+                }
+            });
+            
+            y += 3;
+            doc.setDrawColor(200, 200, 200);
+            doc.line(15, y, 200, y);
+            
+            y += 7;
+            doc.setFont('helvetica', 'bold');
+            doc.text(`TOTAL DE ITEMS: ${rowCount}`, 15, y);
+            
+            y += 15;
+            doc.setFont('helvetica', 'bold');
+            doc.setFontSize(10);
+            doc.text('FIRMA:', 15, y);
+            
+            y += 3;
+            if (conteo.firma) {
+                doc.addImage(conteo.firma, 'PNG', 15, y, 60, 20);
+            }
+            
+            y += 25;
+            doc.setDrawColor(0, 0, 0);
+            doc.line(15, y, 75, y);
+            
+            y += 5;
+            doc.setFont('helvetica', 'normal');
+            doc.setFontSize(8);
+            doc.text(conteo.nombre, 15, y);
+            
+            const fileName = `Cierre_${conteo.tipo}_${conteo.fecha}.pdf`;
+            doc.save(fileName);
+            
+            showToast('✅ PDF descargado');
+        }
+        
+        function generarExcelDesdeHistorial(id) {
+            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            const conteo = historial.find(c => c.id === id);
+            if (!conteo) return;
+            
+            const ExcelJS = window.ExcelJS;
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('Cierre');
+            
+            worksheet.columns = [
+                { header: 'SKU', key: 'sku', width: 12 },
+                { header: 'Producto', key: 'producto', width: 40 },
+                { header: 'Cantidad', key: 'cantidad', width: 12 }
+            ];
+            
+            worksheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4a0404' } };
+            worksheet.getRow(1).font = { color: { argb: 'FFFFFFFF' }, bold: true, size: 11 };
+            
+            let rowNum = 2;
+            rawProducts.forEach(p => {
+                const qty = conteo.datos[p.sku] || 0;
+                if (qty > 0) {
+                    worksheet.addRow({
+                        sku: p.sku,
+                        producto: p.name,
+                        cantidad: qty
+                    });
+                    rowNum++;
+                }
+            });
+            
+            const totalRow = rowNum + 1;
+            worksheet.getRow(totalRow).getCell(1).value = 'TOTAL';
+            worksheet.getRow(totalRow).getCell(3).value = `=SUM(C2:C${rowNum - 1})`;
+            worksheet.getRow(totalRow).font = { bold: true, size: 11 };
+            worksheet.getRow(totalRow).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFe2e8f0' } };
+            
+            const infoRow = totalRow + 3;
+            worksheet.getRow(infoRow).getCell(1).value = 'Tipo:';
+            worksheet.getRow(infoRow).getCell(2).value = conteo.tipo;
+            worksheet.getRow(infoRow + 1).getCell(1).value = 'Responsable:';
+            worksheet.getRow(infoRow + 1).getCell(2).value = conteo.nombre;
+            worksheet.getRow(infoRow + 2).getCell(1).value = 'Fecha:';
+            worksheet.getRow(infoRow + 2).getCell(2).value = conteo.fecha;
+            
+            const fileName = `Cierre_${conteo.tipo}_${conteo.fecha}.xlsx`;
+            workbook.xlsx.writeBuffer().then(buffer => {
+                const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = fileName;
+                link.click();
+                
+                showToast('✅ Excel descargado');
+            });
         }
 
         // ============================================
@@ -1787,15 +2527,6 @@ if (mainView === 'catalog') {
             document.getElementById('dSku').innerText = p.sku;
             document.getElementById('dDesc').innerText = p.description || 'Sin descripción disponible.';
             
-            const imgEl = document.getElementById('dImg');
-            const ph = document.getElementById('dPlace');
-            
-            if(p.image) {
-                imgEl.src = p.image; imgEl.style.display = 'block'; ph.style.display = 'none';
-            } else {
-                imgEl.style.display = 'none'; ph.style.display = 'block';
-            }
-            
             const originEl = document.getElementById('dOrigin');
             if (p.origin) {
                 originEl.textContent = p.origin;
@@ -1809,6 +2540,44 @@ if (mainView === 'catalog') {
 
         function closeOverlay() {
             document.getElementById('productOverlay').classList.remove('active');
+        }
+
+        function showGuideSuggestions() {
+            const guideInput = document.getElementById('guideNumber');
+            if (!guideInput) return;
+            
+            // Obtener guías del historial
+            const savedGuides = Object.keys(localStorage).filter(key => key.startsWith('inv_recep_doc_')).map(key => {
+                return localStorage.getItem(key);
+            }).filter(Boolean);
+            
+            const uniqueGuides = [...new Set(savedGuides)];
+            
+            if (uniqueGuides.length === 0) return;
+            
+            let suggestionHtml = '<div style="position: absolute; top: 40px; left: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; max-height: 200px; overflow-y: auto; z-index: 1000;">';
+            uniqueGuides.forEach(guide => {
+                suggestionHtml += `<div style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0;" onclick="setGuide('${guide}')">${guide}</div>`;
+            });
+            suggestionHtml += '</div>';
+            
+            guideInput.parentElement.style.position = 'relative';
+            let existing = guideInput.parentElement.querySelector('[style*="position: absolute"]');
+            if (existing) existing.remove();
+            guideInput.parentElement.insertAdjacentHTML('beforeend', suggestionHtml);
+        }
+
+        function filterGuideSuggestions(value) {
+            showGuideSuggestions();
+        }
+
+        function setGuide(guide) {
+            const guideInput = document.getElementById('guideNumber');
+            guideInput.value = guide;
+            // Limpiar sugerencias
+            let existing = guideInput.parentElement.querySelector('[style*="position: absolute"]');
+            if (existing) existing.remove();
+            saveData();
         }
 
         function setupOverlaySwipe() {
@@ -2575,65 +3344,7 @@ function mostrarPantallaFirma() {
         inicializarCanvasFirma();
     }, 100);
 }
-    function inicializarCanvasFirma() {
-    const canvas = document.getElementById('signatureCanvas');
-    if (!canvas) {
-        console.error('❌ Canvas no encontrado');
-        return;
-    }
-    
-    const ctx = canvas.getContext('2d');
-    
-    // Ajustar tamaño real del canvas
-    canvas.width = canvas.offsetWidth;
-    canvas.height = 200;
-    
-    let drawing = false;
-    
-    const startDrawing = (e) => {
-        drawing = true;
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-    };
-    
-    const draw = (e) => {
-        if (!drawing) return;
-        e.preventDefault();
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-        ctx.lineTo(x, y);
-        ctx.strokeStyle = '#1e293b';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        ctx.stroke();
-    };
-    
-    const stopDrawing = () => {
-        drawing = false;
-    };
-    
-    // Eventos mouse
-    canvas.addEventListener('mousedown', startDrawing);
-    canvas.addEventListener('mousemove', draw);
-    canvas.addEventListener('mouseup', stopDrawing);
-    canvas.addEventListener('mouseout', stopDrawing);
-    
-    // Eventos touch
-    canvas.addEventListener('touchstart', startDrawing);
-    canvas.addEventListener('touchmove', draw);
-    canvas.addEventListener('touchend', stopDrawing);
-    
-    // Función limpiar (global)
-    window.limpiarFirma = () => {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    };
-    
-    console.log('✅ Canvas de firma inicializado');
-}
+
 async function finalizarRecepcionConFirma() {
     const canvas = document.getElementById('signatureCanvas');
     
@@ -2855,236 +3566,6 @@ async function finalizarRecepcionConFirma() {
         renderProducts();
     }, 1000);
 }
-
-// FIRMA Y REPORTES
-function abrirFirmaConteo() {
-    const total = Object.values(dataCount).reduce((s, c) => s + c, 0);
-    if (total === 0) {
-        showToast('⚠️ Debes contar al menos 1 producto');
-        return;
-    }
-    
-    let modal = document.getElementById('firmaModal');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'firmaModal';
-        modal.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);display:flex;align-items:center;justify-content:center;z-index:5000;padding:20px;';
-        document.body.appendChild(modal);
-    }
-    
-    const totalProd = Object.keys(dataCount).filter(k => dataCount[k] > 0).length;
-    const hoy = new Date().toLocaleDateString('es-CL');
-    
-    modal.innerHTML = `
-        <div style="background:white;border-radius:16px;padding:25px;width:100%;max-width:400px;max-height:85vh;overflow-y:auto;box-shadow:0 25px 50px rgba(0,0,0,0.25);">
-            <h3 style="font-size:18px;font-weight:700;margin-bottom:20px;color:#1e293b;">🖊️ FIRMA DEL CONTEO</h3>
-            
-            <div style="background:#f0fdf4;padding:12px;border-radius:8px;margin-bottom:20px;border-left:4px solid #059669;">
-                <div style="font-size:13px;color:#1e293b;margin-bottom:5px;"><strong>Resumen:</strong></div>
-                <div style="font-size:12px;color:#64748b;">📦 Productos: <strong>${totalProd}</strong> | 📊 Unidades: <strong>${total}</strong> | 📅 ${hoy}</div>
-            </div>
-            
-            <div style="margin-bottom:15px;">
-                <label style="display:block;font-weight:600;margin-bottom:8px;color:#1e293b;font-size:14px;">Nombre <span style="color:red;">*</span></label>
-                <select id="nombreFirmaSelect" style="width:100%;padding:10px;border:1px solid #e2e8f0;border-radius:8px;font-size:14px;">
-                    <option value="">-- Selecciona --</option>
-                    <option value="Vicente">Vicente</option>
-                    <option value="María José">María José</option>
-                </select>
-            </div>
-            
-            <div style="margin-bottom:15px;">
-                <label style="display:block;font-weight:600;margin-bottom:8px;color:#1e293b;font-size:14px;">Firma <span style="color:red;">*</span></label>
-                <div style="border:2px dashed #ccc;border-radius:8px;overflow:hidden;background:white;">
-                    <canvas id="canvasFirma" style="width:100%;height:120px;display:block;cursor:crosshair;"></canvas>
-                </div>
-            </div>
-            
-            <div style="display:flex;gap:10px;margin-bottom:15px;">
-                <button onclick="limpiarCanvas()" style="flex:1;padding:10px;background:#f3f4f6;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-weight:500;color:#64748b;">🔄 Limpiar</button>
-                <button onclick="cerrarFirmaModal()" style="flex:1;padding:10px;background:white;border:1px solid #e2e8f0;border-radius:8px;cursor:pointer;font-weight:500;color:#64748b;">Cancelar</button>
-            </div>
-            
-            <button onclick="generarReportesConteo()" style="width:100%;padding:12px;background:linear-gradient(135deg,#059669 0%,#047857 100%);color:white;border:none;border-radius:8px;cursor:pointer;font-weight:600;font-size:14px;">✅ Generar Reportes</button>
-        </div>
-    `;
-    
-    modal.style.display = 'flex';
-    setTimeout(() => inicializarCanvas(), 150);
-}
-
-function inicializarCanvas() {
-    const canvas = document.getElementById('canvasFirma');
-    if (!canvas) return;
-    
-    const ctx = canvas.getContext('2d');
-    canvas.width = canvas.offsetWidth;
-    canvas.height = 120;
-    let dibujando = false;
-    
-    const inicio = (e) => {
-        dibujando = true;
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-    };
-    
-    const dibujo = (e) => {
-        if (!dibujando) return;
-        e.preventDefault?.();
-        const rect = canvas.getBoundingClientRect();
-        const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
-        const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
-        ctx.lineTo(x, y);
-        ctx.strokeStyle = '#000';
-        ctx.lineWidth = 2;
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.stroke();
-    };
-    
-    canvas.addEventListener('mousedown', inicio);
-    canvas.addEventListener('mousemove', dibujo);
-    canvas.addEventListener('mouseup', () => dibujando = false);
-    canvas.addEventListener('mouseout', () => dibujando = false);
-    canvas.addEventListener('touchstart', inicio);
-    canvas.addEventListener('touchmove', dibujo);
-    canvas.addEventListener('touchend', () => dibujando = false);
-}
-
-function limpiarCanvas() {
-    const canvas = document.getElementById('canvasFirma');
-    if (canvas) {
-        const ctx = canvas.getContext('2d');
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-    }
-}
-
-function cerrarFirmaModal() {
-    const modal = document.getElementById('firmaModal');
-    if (modal) modal.style.display = 'none';
-}
-
-function generarReportesConteo() {
-    console.log('🔍 Iniciando generarReportesConteo');
-    
-    const nombre = document.getElementById('nombreFirmaSelect').value;
-    const canvas = document.getElementById('canvasFirma');
-    
-    if (!nombre) {
-        showToast('⚠️ Selecciona un nombre');
-        return;
-    }
-    
-    if (!canvas) {
-        showToast('❌ Canvas no encontrado');
-        return;
-    }
-    
-    const ctx = canvas.getContext('2d');
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const hayFirma = imageData.data.some((v, i) => i % 4 === 3 && v > 100);
-    
-    if (!hayFirma) {
-        showToast('⚠️ Dibuja tu firma');
-        return;
-    }
-    
-    const firmaURL = canvas.toDataURL('image/png');
-    const total = Object.values(dataCount).reduce((s, c) => s + c, 0);
-    const totalProd = Object.keys(dataCount).filter(k => dataCount[k] > 0).length;
-    
-    try {
-        console.log('📄 Generando PDF...');
-        
-        // Acceder a jsPDF correctamente
-        let jsPDFLib = window.jsPDF || window.jspdf;
-        if (!jsPDFLib) {
-            showToast('⏳ Cargando jsPDF...');
-            setTimeout(generarReportesConteo, 500);
-            return;
-        }
-        
-        const jsPDF = jsPDFLib.jsPDF || jsPDFLib;
-        const doc = new jsPDF();
-        
-        doc.setFillColor(74, 4, 4);
-        doc.rect(0, 0, 210, 30, 'F');
-        doc.setTextColor(255, 255, 255);
-        doc.setFontSize(24);
-        doc.text('COQUINARIA', 105, 18, { align: 'center' });
-        
-        let y = 45;
-        doc.setTextColor(0, 0, 0);
-        doc.setFontSize(14);
-        doc.text('REPORTE DE CONTEO', 105, y, { align: 'center' });
-        
-        y += 12;
-        doc.setFontSize(10);
-        doc.text(`Fecha: ${new Date().toLocaleDateString('es-CL')}`, 20, y);
-        y += 6;
-        doc.text(`Responsable: ${nombre}`, 20, y);
-        y += 6;
-        doc.text(`Productos: ${totalProd} | Unidades: ${total}`, 20, y);
-        
-        if (firmaURL) {
-            y += 12;
-            doc.text('Firma:', 20, y);
-            y += 3;
-            doc.addImage(firmaURL, 'PNG', 20, y, 50, 25);
-        }
-        
-        y += 35;
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.text('SKU', 20, y);
-        doc.text('Producto', 50, y);
-        doc.text('Cant', 180, y);
-        
-        y += 5;
-        doc.line(20, y, 200, y);
-        y += 4;
-        
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        
-        rawProducts.forEach(p => {
-            if (dataCount[p.sku] && dataCount[p.sku] > 0) {
-                if (y > 270) {
-                    doc.addPage();
-                    y = 20;
-                }
-                doc.text(p.sku, 20, y);
-                doc.text(p.name.substring(0, 100), 50, y);
-                doc.text(dataCount[p.sku].toString(), 180, y);
-                y += 4;
-            }
-        });
-        
-        const fecha = new Date().toISOString().split('T')[0];
-        const nombreLimpio = nombre.replace(/\s+/g, '_');
-        doc.save(`Conteo_${fecha}_${nombreLimpio}.pdf`);
-        
-        console.log('✅ PDF generado correctamente');
-        showToast('✅ PDF descargado');
-        
-        // Cerrar y limpiar
-        setTimeout(() => {
-            cerrarFirmaModal();
-            dataCount = {};
-            saveData();
-            renderProducts();
-            showToast('✅ Conteo completado');
-        }, 500);
-        
-    } catch(e) {
-        console.error('❌ Error:', e);
-        showToast('❌ Error: ' + e.message);
-    }
-}
-
     </script>
 </body>
 </html>
