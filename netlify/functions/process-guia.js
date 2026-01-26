@@ -156,62 +156,104 @@ function procesarGuiaElectronica(texto) {
   let fecha = '';
   let productos = [];
   
-  // EXTRAER NÚMERO DE GUÍA
-  const guiaMatch = texto.match(/N°\s*(\d{12})/i);
+  // EXTRAER NÚMERO DE GUÍA - más flexible
+  let guiaMatch = texto.match(/N°\s*(\d{12})/i);
+  if (!guiaMatch) {
+    guiaMatch = texto.match(/N°\s*(\d+)/i);
+  }
   if (guiaMatch) {
     numeroGuia = guiaMatch[1];
   }
   
   // EXTRAER FECHA EMISIÓN
-  const fechaMatch = texto.match(/FECHA\s+EMISIÓN\s*:\s*(\d{2}\/\d{2}\/\d{4})/i);
+  let fechaMatch = texto.match(/FECHA\s+EMISIÓN\s*:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+  if (!fechaMatch) {
+    fechaMatch = texto.match(/FECHA\s+EMISIÓN\s*:\s*(\d{2}\.\d{2}\.\d{4})/i);
+  }
   if (fechaMatch) {
     fecha = fechaMatch[1];
   }
   
   console.log(`📋 Guía Electrónica: ${numeroGuia}, Fecha: ${fecha}`);
   
-  // EXTRAER PRODUCTOS
-  // Formato: CÓDIGO | DESCRIPCIÓN | CANTIDAD | UNITARIO | TOTAL
+  // EXTRAER PRODUCTOS - versión mejorada
   const lineas = texto.split('\n');
   let enTablaProductos = false;
   
   for (let i = 0; i < lineas.length; i++) {
     const linea = lineas[i].trim();
     
-    // Detectar inicio de tabla de productos (línea con "CÓDIGO")
-    if (linea.match(/CÓDIGO/i) && linea.match(/DESCRIPCIÓN/i)) {
+    // Detectar inicio de tabla de productos
+    if ((linea.match(/CÓDIGO/i) && linea.match(/DESCRIPCIÓN/i)) || 
+        (linea.match(/CODIGO/i) && linea.match(/CANTIDAD/i))) {
       enTablaProductos = true;
+      console.log('📊 Detectada tabla de productos');
       continue;
     }
     
-    // Si estamos en la tabla y encontramos SKU
-    if (enTablaProductos && linea.match(/^80\d{3}\s/)) {
-      // Patrón: 80XXX | descripción | cantidad | ... 
-      const productoMatch = linea.match(/^(80\d{3})\s+(.+?)\s+(\d+)\s+/);
-      
-      if (productoMatch) {
-        const sku = productoMatch[1];
-        const descripcion = productoMatch[2].trim();
-        const cantidad = parseInt(productoMatch[3]);
-        
-        if (sku && cantidad > 0) {
-          productos.push({
-            codigo: sku,
-            descripcion: descripcion,
-            cantidad: cantidad,
-            recepcion: cantidad,
-            diferencia: 0
-          });
-          console.log(`  ✓ ${sku}: ${descripcion.substring(0, 40)}... (${cantidad} un.)`);
-        }
-      }
-    }
-    
-    // Salir de la tabla si llegamos a totales
-    if (enTablaProductos && (linea.match(/TOTAL/i) || linea.match(/^Total/))) {
+    // Salir de la tabla si llegamos a totales o resumen
+    if (enTablaProductos && (linea.match(/TOTAL/i) || linea.match(/^Total/) || linea.match(/neto/i))) {
       break;
     }
+    
+    // Si estamos en la tabla y encontramos SKU
+    if (enTablaProductos && linea.match(/^80\d{3}/)) {
+      // Intenta varios patrones
+      let sku = '';
+      let descripcion = '';
+      let cantidad = 0;
+      
+      // Patrón 1: 80XXX descripción cantidad unitario total
+      let productoMatch = linea.match(/^(80\d{3})\s+(.+?)\s+(\d+)\s+[\d,.]+\s+[\d,.]+/);
+      
+      // Patrón 2: 80XXX | descripción | cantidad
+      if (!productoMatch) {
+        productoMatch = linea.match(/^(80\d{3})\s*\|\s*(.+?)\s*\|\s*(\d+)/);
+      }
+      
+      // Patrón 3: 80XXX descripción cantidad (sin precio)
+      if (!productoMatch) {
+        productoMatch = linea.match(/^(80\d{3})\s+(.+?)\s+(\d+)$/);
+      }
+      
+      // Patrón 4: Solo extraer SKU y buscar cantidad en siguiente línea
+      if (!productoMatch) {
+        const skuMatch = linea.match(/^(80\d{3})\s+(.+)/);
+        if (skuMatch) {
+          sku = skuMatch[1];
+          descripcion = skuMatch[2].trim();
+          
+          // Buscar cantidad en línea siguiente
+          if (i + 1 < lineas.length) {
+            const proximaLinea = lineas[i + 1].trim();
+            const cantMatch = proximaLinea.match(/^(\d+)\s+/);
+            if (cantMatch) {
+              cantidad = parseInt(cantMatch[1]);
+            }
+          }
+        }
+      }
+      
+      if (productoMatch) {
+        sku = productoMatch[1];
+        descripcion = productoMatch[2].trim();
+        cantidad = parseInt(productoMatch[3]);
+      }
+      
+      if (sku && cantidad > 0) {
+        productos.push({
+          codigo: sku,
+          descripcion: descripcion,
+          cantidad: cantidad,
+          recepcion: cantidad,
+          diferencia: 0
+        });
+        console.log(`  ✓ ${sku}: ${descripcion.substring(0, 40)}... (${cantidad} un.)`);
+      }
+    }
   }
+  
+  console.log(`✅ Productos encontrados en Guía Electrónica: ${productos.length}`);
   
   return {
     numeroGuia: numeroGuia,
