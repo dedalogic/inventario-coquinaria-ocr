@@ -3296,16 +3296,26 @@ function setupSearch() {
                 reader.onload = async (e) => {
                     try {
                         // Convertir PDF a imagen primero
-                        const canvas = await convertirPDFaImagen(e.target.result);
+                        let canvas;
+                        try {
+                            canvas = await convertirPDFaImagen(e.target.result);
+                        } catch (pdfError) {
+                            console.error('Error en PDF.js:', pdfError);
+                            showToast('❌ No se pudo procesar el PDF: ' + pdfError.message);
+                            return;
+                        }
+                        
                         if (!canvas) {
-                            showToast('❌ Error al procesar el PDF');
+                            showToast('❌ Error al convertir PDF a imagen');
                             return;
                         }
                         
                         // Obtener imagen en base64
                         const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                        console.log('📸 Imagen generada, tamaño:', (imageBase64.length / 1024).toFixed(2), 'KB');
                         
                         // Enviar a Google Vision
+                        showToast('🚀 Enviando a Google Vision AI...');
                         const response = await fetch('/.netlify/functions/process-guia', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -3319,13 +3329,15 @@ function setupSearch() {
                             return;
                         }
                         
-                        const folio = result.folio || result.numeroFactura || '';
+                        const folio = result.folio || result.numeroFactura || result.numeroGuia || '';
                         const fecha = result.fechaOrden || result.fechaFactura || '';
                         const productos = (result.productos || []).map(p => ({
                             sku: p.codigo,
                             descripcion: p.descripcion,
                             cantidad: p.cantidad
                         }));
+                        
+                        console.log('✅ Datos extraídos:', {folio, productos: productos.length});
                         
                         if (!folio || productos.length === 0) {
                             showToast('❌ No se pudieron extraer los datos del PDF');
@@ -3356,6 +3368,7 @@ function setupSearch() {
                     await cargarPDFJS();
                 }
                 
+                console.log('📄 Cargando PDF...');
                 const pdf = await window.pdfjsLib.getDocument({data: pdfArrayBuffer}).promise;
                 const page = await pdf.getPage(1);
                 
@@ -3367,24 +3380,53 @@ function setupSearch() {
                 canvas.height = viewport.height;
                 
                 const context = canvas.getContext('2d');
-                await page.render({canvasContext: context, viewport: viewport}).promise;
+                if (!context) {
+                    throw new Error('No se pudo obtener contexto 2D del canvas');
+                }
+                
+                console.log('🖼️ Renderizando página...');
+                const renderTask = page.render({
+                    canvasContext: context,
+                    viewport: viewport
+                });
+                
+                await renderTask.promise;
+                console.log('✅ PDF convertido a imagen');
                 
                 return canvas;
             } catch (error) {
-                console.error('Error convirtiendo PDF:', error);
-                return null;
+                console.error('❌ Error convirtiendo PDF:', error);
+                throw error;
             }
         }
         
         async function cargarPDFJS() {
             return new Promise((resolve, reject) => {
-                const script = document.createElement('script');
-                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
-                script.onload = () => {
-                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                // Verificar si ya está cargado
+                if (window.pdfjsLib) {
                     resolve();
+                    return;
+                }
+                
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.269/pdf.min.js';
+                script.crossOrigin = 'anonymous';
+                script.onload = () => {
+                    try {
+                        // Esperar a que pdfjsLib esté disponible
+                        setTimeout(() => {
+                            if (window.pdfjsLib) {
+                                window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.269/pdf.worker.min.js';
+                                resolve();
+                            } else {
+                                reject(new Error('pdfjsLib no disponible después de cargar script'));
+                            }
+                        }, 100);
+                    } catch (e) {
+                        reject(e);
+                    }
                 };
-                script.onerror = () => reject(new Error('No se pudo cargar PDF.js'));
+                script.onerror = () => reject(new Error('No se pudo cargar PDF.js desde CDN'));
                 document.head.appendChild(script);
             });
         }
