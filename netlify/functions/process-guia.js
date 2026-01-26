@@ -5,10 +5,14 @@ let visionClient;
 const getVisionClient = () => {
   if (!visionClient) {
     if (!process.env.GOOGLE_CREDENTIALS) {
-      throw new Error('GOOGLE_CREDENTIALS not configured');
+      throw new Error('GOOGLE_CREDENTIALS not configured in Netlify');
     }
-    const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-    visionClient = new ImageAnnotatorClient({ credentials });
+    try {
+      const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
+      visionClient = new ImageAnnotatorClient({ credentials });
+    } catch (error) {
+      throw new Error('Invalid GOOGLE_CREDENTIALS format: ' + error.message);
+    }
   }
   return visionClient;
 };
@@ -34,7 +38,8 @@ exports.handler = async (event) => {
   }
 
   try {
-    const { image } = JSON.parse(event.body);
+    const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
+    const { image } = body;
     
     if (!image) {
       return {
@@ -47,18 +52,45 @@ exports.handler = async (event) => {
       };
     }
 
-    const client = getVisionClient();
+    let client;
+    try {
+      client = getVisionClient();
+    } catch (credError) {
+      console.error('Credential error:', credError.message);
+      return {
+        statusCode: 500,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: credError.message
+        })
+      };
+    }
+
     const base64Image = image.split(',')[1] || image;
 
     const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Vision API timeout')), 25000)
+      setTimeout(() => reject(new Error('Vision API timeout after 25s')), 25000)
     );
 
     const visionPromise = client.textDetection({
       image: { content: base64Image }
     });
 
-    const [result] = await Promise.race([visionPromise, timeoutPromise]);
+    let result;
+    try {
+      [result] = await Promise.race([visionPromise, timeoutPromise]);
+    } catch (visionError) {
+      console.error('Vision API error:', visionError.message);
+      return {
+        statusCode: visionError.message.includes('timeout') ? 504 : 500,
+        headers,
+        body: JSON.stringify({
+          success: false,
+          error: 'Vision API error: ' + visionError.message
+        })
+      };
+    }
 
     const detections = result.textAnnotations;
     
@@ -68,12 +100,14 @@ exports.handler = async (event) => {
         headers,
         body: JSON.stringify({
           success: false,
-          error: 'No se detectó texto en la imagen'
+          error: 'No text detected in image'
         })
       };
     }
 
     const fullText = detections[0].description;
+    console.log('OCR Raw text:', fullText.substring(0, 200) + '...');
+    
     const resultado = procesarGuiaKitchenCenter(fullText);
 
     return {
@@ -87,14 +121,14 @@ exports.handler = async (event) => {
     };
 
   } catch (error) {
-    console.error('Error procesando imagen:', error);
+    console.error('Handler error:', error);
     
     return {
-      statusCode: error.message.includes('timeout') ? 504 : 500,
+      statusCode: 500,
       headers,
       body: JSON.stringify({
         success: false,
-        error: error.message || 'Error procesando la imagen'
+        error: error.message || 'Unknown error processing image'
       })
     };
   }
@@ -128,8 +162,14 @@ function procesarGuiaKitchenCenter(texto) {
     fechaOrden = fechaOrdenMatch[1];
   }
   
-  // DETECTAR FOLIO
-  const folioMatch = texto.match(/FOLIO\s*\[\s*(\d+)\s*\]/i);
+  // DETECTAR FOLIO - múltiples patrones
+  let folioMatch = texto.match(/FOLIO\s*\[\s*(\d+)\s*\]/i);
+  if (!folioMatch) {
+    folioMatch = texto.match(/FOLIO\s*[:\s]*(\d+)/i);
+  }
+  if (!folioMatch) {
+    folioMatch = texto.match(/Folio\s*[:\s]*(\d+)/i);
+  }
   if (folioMatch) {
     folio = folioMatch[1];
   }
@@ -140,7 +180,7 @@ function procesarGuiaKitchenCenter(texto) {
     tienda = tiendaMatch[1];
   }
   
-  // DETECTAR PRODUCTOS
+  // DETECTAR PRODUCTOS - más robusto
   for (let i = 0; i < lineas.length; i++) {
     const linea = lineas[i];
     
@@ -159,7 +199,7 @@ function procesarGuiaKitchenCenter(texto) {
         if (siguienteLinea.length > 10 && 
             !siguienteLinea.match(/^[\d\s]+$/) &&
             !siguienteLinea.match(/^80\d{3}/) &&
-            !siguienteLinea.match(/TOTAL|Proveedor|Dirección|Comuna|Ciudad|Factura|NETO|IVA/i)) {
+            !siguienteLinea.match(/TOTAL|Proveedor|Dirección|Comuna|Ciudad|Factura|NETO|IVA|RUT|Orden/i)) {
           
           descripcion = siguienteLinea.replace(/80\d{3}\s*$/, '').trim();
           
@@ -192,11 +232,11 @@ function procesarGuiaKitchenCenter(texto) {
     }
   }
   
-  console.log(`🎯 Productos detectados: ${productos.length}`);
-  console.log(`📋 Factura: ${numeroFactura}, Folio: ${folio}`);
+  console.log(`✅ Productos detectados: ${productos.length}`);
+  console.log(`📋 Folio: ${folio}, Factura: ${numeroFactura}`);
   
   return {
-    numeroGuia: numeroFactura,
+    numeroGuia: numeroFactura || folio,
     numeroFactura,
     fechaFactura,
     fechaOrden,
