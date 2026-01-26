@@ -56,7 +56,7 @@ exports.handler = async (event) => {
     try {
       client = getVisionClient();
     } catch (credError) {
-      console.error('Credential error:', credError.message);
+      console.error('❌ Credential error:', credError.message);
       return {
         statusCode: 500,
         headers,
@@ -81,7 +81,7 @@ exports.handler = async (event) => {
     try {
       [result] = await Promise.race([visionPromise, timeoutPromise]);
     } catch (visionError) {
-      console.error('Vision API error:', visionError.message);
+      console.error('❌ Vision API error:', visionError.message);
       return {
         statusCode: visionError.message.includes('timeout') ? 504 : 500,
         headers,
@@ -106,25 +106,9 @@ exports.handler = async (event) => {
     }
 
     const fullText = detections[0].description;
-    console.log('🔍 OCR detectado');
+    console.log('✅ OCR detectado correctamente');
     
-    // Detectar qué tipo de documento es
-    const esGuiaElectronica = /GUÍA DE DESPACHO\s+ELECTRÓNICA|N°\s*001\d+/i.test(fullText);
-    const esKitchenCenter = /KITCHEN CENTER|FOLIO\s*\[\s*\d+\s*\]/i.test(fullText);
-    
-    console.log(`📄 Tipo: ${esGuiaElectronica ? 'Guía Electrónica' : esKitchenCenter ? 'Kitchen Center' : 'Desconocido'}`);
-    
-    let resultado;
-    
-    if (esGuiaElectronica) {
-      resultado = procesarGuiaElectronica(fullText);
-    } else if (esKitchenCenter) {
-      resultado = procesarKitchenCenter(fullText);
-    } else {
-      resultado = procesarGuiaElectronica(fullText); // Intenta parsear como guía por defecto
-    }
-    
-    console.log(`✅ Resultado: ${resultado.productos.length} productos, Guía: ${resultado.numeroGuia}`);
+    const resultado = procesarKitchenCenter(fullText);
 
     return {
       statusCode: 200,
@@ -137,7 +121,7 @@ exports.handler = async (event) => {
     };
 
   } catch (error) {
-    console.error('Handler error:', error);
+    console.error('❌ Handler error:', error);
     
     return {
       statusCode: 500,
@@ -150,125 +134,14 @@ exports.handler = async (event) => {
   }
 };
 
-// PROCESAR GUÍA DE DESPACHO ELECTRÓNICA (foto)
-function procesarGuiaElectronica(texto) {
-  let numeroGuia = '';
-  let fecha = '';
-  let productos = [];
-  
-  // EXTRAER NÚMERO DE GUÍA - más flexible
-  let guiaMatch = texto.match(/N°\s*(\d{12})/i);
-  if (!guiaMatch) {
-    guiaMatch = texto.match(/N°\s*(\d+)/i);
-  }
-  if (guiaMatch) {
-    numeroGuia = guiaMatch[1];
-  }
-  
-  // EXTRAER FECHA EMISIÓN
-  let fechaMatch = texto.match(/FECHA\s+EMISIÓN\s*:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
-  if (!fechaMatch) {
-    fechaMatch = texto.match(/FECHA\s+EMISIÓN\s*:\s*(\d{2}\.\d{2}\.\d{4})/i);
-  }
-  if (fechaMatch) {
-    fecha = fechaMatch[1];
-  }
-  
-  console.log(`📋 Guía Electrónica: ${numeroGuia}, Fecha: ${fecha}`);
-  
-  // EXTRAER PRODUCTOS - versión mejorada
-  const lineas = texto.split('\n');
-  let enTablaProductos = false;
-  
-  for (let i = 0; i < lineas.length; i++) {
-    const linea = lineas[i].trim();
-    
-    // Detectar inicio de tabla de productos
-    if ((linea.match(/CÓDIGO/i) && linea.match(/DESCRIPCIÓN/i)) || 
-        (linea.match(/CODIGO/i) && linea.match(/CANTIDAD/i))) {
-      enTablaProductos = true;
-      console.log('📊 Detectada tabla de productos');
-      continue;
-    }
-    
-    // Salir de la tabla si llegamos a totales o resumen
-    if (enTablaProductos && (linea.match(/TOTAL/i) || linea.match(/^Total/) || linea.match(/neto/i))) {
-      break;
-    }
-    
-    // Si estamos en la tabla y encontramos SKU
-    if (enTablaProductos && linea.match(/^80\d{3}/)) {
-      // Intenta varios patrones
-      let sku = '';
-      let descripcion = '';
-      let cantidad = 0;
-      
-      // Patrón 1: 80XXX descripción cantidad unitario total
-      let productoMatch = linea.match(/^(80\d{3})\s+(.+?)\s+(\d+)\s+[\d,.]+\s+[\d,.]+/);
-      
-      // Patrón 2: 80XXX | descripción | cantidad
-      if (!productoMatch) {
-        productoMatch = linea.match(/^(80\d{3})\s*\|\s*(.+?)\s*\|\s*(\d+)/);
-      }
-      
-      // Patrón 3: 80XXX descripción cantidad (sin precio)
-      if (!productoMatch) {
-        productoMatch = linea.match(/^(80\d{3})\s+(.+?)\s+(\d+)$/);
-      }
-      
-      // Patrón 4: Solo extraer SKU y buscar cantidad en siguiente línea
-      if (!productoMatch) {
-        const skuMatch = linea.match(/^(80\d{3})\s+(.+)/);
-        if (skuMatch) {
-          sku = skuMatch[1];
-          descripcion = skuMatch[2].trim();
-          
-          // Buscar cantidad en línea siguiente
-          if (i + 1 < lineas.length) {
-            const proximaLinea = lineas[i + 1].trim();
-            const cantMatch = proximaLinea.match(/^(\d+)\s+/);
-            if (cantMatch) {
-              cantidad = parseInt(cantMatch[1]);
-            }
-          }
-        }
-      }
-      
-      if (productoMatch) {
-        sku = productoMatch[1];
-        descripcion = productoMatch[2].trim();
-        cantidad = parseInt(productoMatch[3]);
-      }
-      
-      if (sku && cantidad > 0) {
-        productos.push({
-          codigo: sku,
-          descripcion: descripcion,
-          cantidad: cantidad,
-          recepcion: cantidad,
-          diferencia: 0
-        });
-        console.log(`  ✓ ${sku}: ${descripcion.substring(0, 40)}... (${cantidad} un.)`);
-      }
-    }
-  }
-  
-  console.log(`✅ Productos encontrados en Guía Electrónica: ${productos.length}`);
-  
-  return {
-    numeroGuia: numeroGuia,
-    numeroFactura: numeroGuia,
-    fechaFactura: fecha,
-    fechaOrden: fecha,
-    folio: numeroGuia,
-    tienda: '',
-    productos: productos,
-    cantidadProductos: productos.length,
-    totalUnidades: productos.reduce((sum, p) => sum + p.cantidad, 0)
-  };
-}
+// PROCESAR KITCHEN CENTER PDF
+// Formato exacto:
+// FOLIO [ 52 ]
+// Fecha Orden de Compra : 14/01/2026
+// Tienda : COQUINARIA PARQUE ARAUCO
+// 80013 Cebolla Caramelizada... 80013 7 7 0 6.714 46.998
+// Factura : 12364348 Fecha Factura : 14/01/2026
 
-// PROCESAR KITCHEN CENTER (PDF)
 function procesarKitchenCenter(texto) {
   let numeroFactura = '';
   let fechaFactura = '';
@@ -277,60 +150,60 @@ function procesarKitchenCenter(texto) {
   let tienda = '';
   let productos = [];
   
-  // DETECTAR FOLIO
-  const folioMatch = texto.match(/FOLIO\s*\[\s*(\d+)\s*\]/i);
+  // 1. DETECTAR FOLIO
+  const folioMatch = texto.match(/FOLIO\s*\[\s*(\d+)\s*\]/);
   if (folioMatch) {
     folio = folioMatch[1];
+    console.log(`📋 Folio detectado: ${folio}`);
   }
   
-  // DETECTAR NÚMERO DE FACTURA
-  const facturaMatch = texto.match(/Factura\s*:\s*(\d+)/i);
+  // 2. DETECTAR NÚMERO DE FACTURA
+  const facturaMatch = texto.match(/Factura\s*:\s*(\d+)/);
   if (facturaMatch) {
     numeroFactura = facturaMatch[1];
+    console.log(`📄 Factura: ${numeroFactura}`);
   }
   
-  // DETECTAR FECHA FACTURA
-  const fechaFacturaMatch = texto.match(/Fecha\s+Factura\s*:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+  // 3. DETECTAR FECHA FACTURA
+  const fechaFacturaMatch = texto.match(/Fecha\s+Factura\s*:\s*(\d{1,2}\/\d{1,2}\/\d{4})/);
   if (fechaFacturaMatch) {
     fechaFactura = fechaFacturaMatch[1];
   }
   
-  // DETECTAR FECHA ORDEN DE COMPRA
-  const fechaOrdenMatch = texto.match(/Fecha\s+Orden\s+de\s+Compra\s*:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
+  // 4. DETECTAR FECHA ORDEN
+  const fechaOrdenMatch = texto.match(/Fecha\s+Orden\s+de\s+Compra\s*:\s*(\d{1,2}\/\d{1,2}\/\d{4})/);
   if (fechaOrdenMatch) {
     fechaOrden = fechaOrdenMatch[1];
   }
   
-  // DETECTAR TIENDA
-  const tiendaMatch = texto.match(/Tienda\s*:\s*([^\n]+)/i);
+  // 5. DETECTAR TIENDA
+  const tiendaMatch = texto.match(/Tienda\s*:\s*([^\n]+)/);
   if (tiendaMatch) {
     tienda = tiendaMatch[1].trim();
   }
   
-  console.log(`📋 Kitchen Center - Folio: ${folio}, Factura: ${numeroFactura}`);
-  
-  // PROCESAR PRODUCTOS
-  // Formato: 80XXX descripción 80XXX cantidad recepción diferencia ...
+  // 6. EXTRAER PRODUCTOS
+  // Patrón: 80XXX descripción 80XXX cantidad recepción diferencia precio total
   const lineas = texto.split('\n');
+  let productosEncontrados = 0;
   
   for (let i = 0; i < lineas.length; i++) {
     const linea = lineas[i].trim();
     
-    // Buscar líneas que empiezan con 80XXX
-    if (linea.match(/^80\d{3}\s/)) {
-      // Patrón: 80XXX descripción 80XXX cantidad recepción diferencia precio total
-      const productoMatch = linea.match(
-        /^(80\d{3})\s+(.+?)\s+(80\d{3})\s+(\d+)\s+(\d+)\s+(\d+)/
-      );
+    // Buscar líneas que empiezan con 80XXX (SKU)
+    if (/^80\d{3}\s/.test(linea)) {
+      // Patrón: 80XXX descripción 80XXX cantidad recepción diferencia ...
+      // El SKU aparece DOS VECES: al inicio y antes de los números
+      const match = linea.match(/^(80\d{3})\s+(.+?)\s+(80\d{3})\s+(\d+)\s+(\d+)\s+(\d+)/);
       
-      if (productoMatch) {
-        const sku = productoMatch[1];
-        const descripcion = productoMatch[2].trim();
-        const cantidad = parseInt(productoMatch[4]);
-        const recepcion = parseInt(productoMatch[5]);
-        const diferencia = parseInt(productoMatch[6]);
+      if (match) {
+        const sku = match[1];
+        const descripcion = match[2].trim();
+        const cantidad = parseInt(match[4]);
+        const recepcion = parseInt(match[5]);
+        const diferencia = parseInt(match[6]);
         
-        if (sku && cantidad > 0) {
+        if (sku && descripcion && cantidad > 0) {
           productos.push({
             codigo: sku,
             descripcion: descripcion,
@@ -338,32 +211,24 @@ function procesarKitchenCenter(texto) {
             recepcion: recepcion,
             diferencia: diferencia
           });
-          console.log(`  ✓ ${sku}: ${descripcion.substring(0, 40)}... (${cantidad} un.)`);
+          productosEncontrados++;
+          console.log(`  ✓ ${sku}: ${descripcion.substring(0, 50)}... → ${cantidad} unidades`);
         }
       }
     }
   }
   
-  // Eliminar duplicados
-  const productosUnicos = [];
-  const skusVistos = new Set();
-  
-  productos.forEach(prod => {
-    if (!skusVistos.has(prod.codigo)) {
-      skusVistos.add(prod.codigo);
-      productosUnicos.push(prod);
-    }
-  });
+  console.log(`✅ Total productos: ${productosEncontrados}`);
   
   return {
-    numeroGuia: numeroFactura || folio,
-    numeroFactura,
-    fechaFactura,
-    fechaOrden,
-    folio,
-    tienda,
-    productos: productosUnicos,
-    cantidadProductos: productosUnicos.length,
-    totalUnidades: productosUnicos.reduce((sum, p) => sum + p.cantidad, 0)
+    numeroGuia: folio || numeroFactura,
+    numeroFactura: numeroFactura,
+    fechaFactura: fechaFactura,
+    fechaOrden: fechaOrden,
+    folio: folio,
+    tienda: tienda,
+    productos: productos,
+    cantidadProductos: productos.length,
+    totalUnidades: productos.reduce((sum, p) => sum + p.cantidad, 0)
   };
 }
