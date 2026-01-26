@@ -383,6 +383,7 @@
     <input type="file" id="importExcelInput" accept=".xlsx,.xls" style="display:none" onchange="importarExcelRecepcion(this.files[0])">
     <input type="file" id="importInventoryExcel" accept=".xlsx,.xls" style="display:none" onchange="importarExcelInventario(this.files[0])">
     <input type="file" id="importReceptionExcel" accept=".xlsx,.xls" style="display:none" onchange="importarExcelRecepcion(this.files[0])">
+    <input type="file" id="importGuidaPDF" accept=".pdf" style="display:none" onchange="importarGuidaPDF(this.files[0])">
     
     <!-- HEADER -->
     <div class="header">
@@ -430,8 +431,22 @@
     </div>
 
     <!-- HISTORY VIEW -->
-    <div id="view-history" style="display:none; padding: 20px;">
-        <h3 style="margin-bottom:15px; color:#1e293b; font-size:18px;">Historial</h3>
+    <div id="view-history" style="display:none; padding: 20px; padding-top: 120px;">
+        <h3 style="margin-bottom:20px; color:#1e293b; font-size:18px;">Historial</h3>
+        
+        <div style="display: flex; gap: 12px; margin-bottom: 20px; align-items: flex-end;">
+            <div style="flex: 1;">
+                <input type="text" id="historySearchInput" placeholder="Buscar por fecha (ej: 2026-01), número de guía o responsable..." 
+                       style="width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif;"
+                       onkeyup="renderHistory()">
+            </div>
+            <select id="historyFilterType" style="padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; font-family: 'Inter', sans-serif; background: white; cursor: pointer; min-width: 140px;" onchange="renderHistory()">
+                <option value="">Todos los tipos</option>
+                <option value="Inventario">Inventario</option>
+                <option value="Recepción">Guía de Despacho</option>
+            </select>
+        </div>
+        
         <div id="historyContent"></div>
     </div>
 
@@ -1000,7 +1015,10 @@ let filterExpanded = null; // 'category' | 'brand' | null
        function switchMainView(view) {
     mainView = view;
     filterExpanded = null;
-    currentBrand = 'Todas'; // Reset brand filter
+    // Solo resetear brand si no estamos cargando del historial
+    if (mainView !== 'history') {
+        currentBrand = 'Todas';
+    }
     
     document.querySelectorAll('.nav-item').forEach(el => el.classList.remove('active'));
     document.getElementById(`nav-${view}`).classList.add('active');
@@ -1033,7 +1051,12 @@ let filterExpanded = null; // 'category' | 'brand' | null
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
             </button>
-            <button class="header-icon-btn" onclick="document.getElementById('importReceptionExcel').click()" title="Importar">
+            <button class="header-icon-btn" onclick="document.getElementById('importGuidaPDF').click()" title="Cargar Guía PDF">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                </svg>
+            </button>
+            <button class="header-icon-btn" onclick="document.getElementById('importReceptionExcel').click()" title="Importar Excel">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4" />
                 </svg>
@@ -1048,11 +1071,15 @@ let filterExpanded = null; // 'category' | 'brand' | null
     if (view === 'history') {
         prodView.style.display = 'none';
         histView.style.display = 'block';
+        document.body.style.paddingTop = '0px';
         document.getElementById('toolbarMenu').innerHTML = '';
+        document.getElementById('stickyControls').style.display = 'none';
         renderHistory();
     } else {
         prodView.style.display = 'block';
         histView.style.display = 'none';
+        document.body.style.paddingTop = '200px';
+        document.getElementById('stickyControls').style.display = 'flex';
         renderBrandFilters(document.getElementById('toolbarMenu'));
     }
 
@@ -1866,11 +1893,14 @@ if (currentBrand !== 'Todas') {
         // ============================================
         
         function abrirModalFirmaConteo() {
-            abrirModalFirma('Conteo');
+            abrirModalFirma('Inventario');
         }
         
         function abrirModalFirmaRecepcion() {
-            abrirModalFirma('Recepción');
+            const numeroGuia = currentDocNumber || prompt('Ingrese número de guía de despacho:');
+            if (numeroGuia) {
+                abrirModalFirma(`Recepción Guía #${numeroGuia}`);
+            }
         }
         
         function abrirModalFirma(tipo) {
@@ -1880,28 +1910,22 @@ if (currentBrand !== 'Todas') {
             modal.querySelector('.modal-title').textContent = `Finalizar ${tipo}`;
             
             let html = `
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-size: 13px; color: #64748b; margin-bottom: 8px; font-weight: 500;">Nombre:</label>
-                    <input type="text" id="inputNombre" placeholder="Ej: Juan Pérez" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px;">
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 500;">Nombre:</label>
+                    <input type="text" id="inputNombre" placeholder="Ej: Juan Pérez" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; font-family: 'Inter', sans-serif;">
                 </div>
                 
-                <div style="margin-bottom: 15px;">
-                    <label style="display: block; font-size: 13px; color: #64748b; margin-bottom: 8px; font-weight: 500;">Firma:</label>
+                <div style="margin-bottom: 20px;">
+                    <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 500;">Firma:</label>
                     <canvas id="canvasFirma" style="width: 100%; height: 120px; border: 2px dashed #e2e8f0; border-radius: 8px; background: white; cursor: crosshair; display: block;"></canvas>
-                    <button onclick="limpiarFirma()" style="width: 100%; margin-top: 8px; padding: 8px; border: 1px solid #e2e8f0; background: white; border-radius: 6px; font-size: 13px; color: #64748b; cursor: pointer; font-weight: 500;">
+                    <button onclick="limpiarFirma()" style="width: 100%; margin-top: 8px; padding: 8px; border: none; background: #f8fafc; border-radius: 6px; font-size: 12px; color: #64748b; cursor: pointer; font-weight: 500;">
                         🔄 Limpiar
                     </button>
                 </div>
                 
-                <div style="display: flex; gap: 10px; margin-top: 15px;">
-                    <button onclick="generarPDF('${tipo}')" style="flex: 1; padding: 12px; background: #4a0404; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
-                        PDF
-                    </button>
-                    <button onclick="generarExcel('${tipo}')" style="flex: 1; padding: 12px; background: #4a0404; color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
-                        Excel
-                    </button>
-                    <button onclick="cerrarFirmaModal()" style="flex: 1; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
-                        Cancelar
+                <div class="modal-actions">
+                    <button onclick="guardarConFirma('${tipo}')" class="btn-cta" style="width: 100%;">
+                        💾 Guardar
                     </button>
                 </div>
             `;
@@ -1999,11 +2023,39 @@ if (currentBrand !== 'Todas') {
             }
         }
         
+        function guardarConFirma(tipo) {
+            const nombre = document.getElementById('inputNombre').value || 'Sin nombre';
+            const canvas = document.getElementById('canvasFirma');
+            
+            if (!canvas) {
+                showToast('❌ Error: Canvas no encontrado');
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const hasDrawing = imageData.data.some(channel => channel !== 0);
+            
+            if (!hasDrawing) {
+                showToast('⚠️ Por favor dibuje su firma');
+                return;
+            }
+            
+            const firmaDataURL = canvas.toDataURL('image/png');
+            guardarConteoConFirma(tipo, nombre, firmaDataURL);
+        }
+        
         let conteoActualGuardado = null;
         
         function guardarConteoConFirma(tipo, nombre, firmaDataURL) {
             const hoy = new Date().toISOString().split('T')[0];
             const id = `${tipo}_${hoy}_${Date.now()}`;
+            
+            // Determinar qué datos guardar según el tipo
+            let datosAGuardar = dataCount;
+            if (tipo.includes('Recepción')) {
+                datosAGuardar = dataReception;
+            }
             
             const conteo = {
                 id: id,
@@ -2011,10 +2063,126 @@ if (currentBrand !== 'Todas') {
                 fecha: hoy,
                 nombre: nombre,
                 firma: firmaDataURL,
-                datos: tipo === 'Conteo' ? {...dataCount} : {...dataReception},
+                datos: {...datosAGuardar},
+                numeroGuia: currentDocNumber || '',
                 timestamp: new Date().getTime()
             };
             
+            // Si es recepción, preguntar si agregar al inventario anterior
+            if (tipo.includes('Recepción')) {
+                mostrarOpcionesRecepcion(conteo);
+            } else {
+                // Si es inventario, guardar directamente
+                guardarEnHistorial(conteo);
+            }
+        }
+        
+        function mostrarOpcionesRecepcion(conteo) {
+            const modal = document.getElementById('firmaModal');
+            const modalContent = document.getElementById('firmaModalContent');
+            
+            let html = `
+                <div style="text-align: center; margin-bottom: 30px;">
+                    <div style="font-size: 24px; color: #059669; margin-bottom: 10px;">✅</div>
+                    <div style="font-size: 18px; font-weight: 600; color: #1e293b;">Recepción guardada</div>
+                    <div style="font-size: 14px; color: #64748b; margin-top: 5px;">¿Qué deseas hacer?</div>
+                </div>
+                
+                <div style="display: flex; gap: 12px; flex-direction: column;">
+                    <button onclick="guardarRecepcionYAgregarAlInventario('${conteo.id}')" 
+                            class="btn-cta" style="width: 100%; background: #059669;">
+                        ➕ Agregar al último inventario
+                    </button>
+                    <button onclick="guardarRecepcionComoNuevo('${conteo.id}')" 
+                            class="btn-cta" style="width: 100%;">
+                        📋 Crear inventario nuevo
+                    </button>
+                    <button onclick="cerrarFirmaModal()" style="width: 100%; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                        ✕ Solo guardar recepción
+                    </button>
+                </div>
+            `;
+            
+            modal.querySelector('.modal-title').textContent = 'Finalizar Recepción';
+            modalContent.innerHTML = html;
+        }
+        
+        function guardarRecepcionYAgregarAlInventario(recepcionId) {
+            // Guardar la recepción primero
+            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            const recepcion = historial.find(h => h.id === recepcionId);
+            
+            if (!recepcion) {
+                showToast('❌ Error: No se encontró la recepción');
+                return;
+            }
+            
+            // Guardar recepción en historial
+            if (!historial.some(h => h.id === recepcionId)) {
+                historial.unshift(recepcion);
+            }
+            
+            // Buscar último inventario
+            const ultimoInventario = historial.find(h => h.tipo === 'Inventario');
+            
+            if (!ultimoInventario) {
+                showToast('❌ No hay inventario anterior para agregar');
+                return;
+            }
+            
+            // Combinar datos: sumar cantidades de recepción al inventario
+            const datosActualizados = {...ultimoInventario.datos};
+            Object.entries(recepcion.datos).forEach(([sku, cantidad]) => {
+                datosActualizados[sku] = (datosActualizados[sku] || 0) + cantidad;
+            });
+            
+            // Actualizar el último inventario
+            ultimoInventario.datos = datosActualizados;
+            ultimoInventario.timestamp = new Date().getTime();
+            
+            localStorage.setItem('historial_conteos', JSON.stringify(historial));
+            
+            conteoActualGuardado = recepcion;
+            showToast('✅ Recepción agregada al inventario anterior');
+            mostrarModalExportarConteo();
+        }
+        
+        function guardarRecepcionComoNuevo(recepcionId) {
+            // Guardar la recepción
+            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            const recepcion = historial.find(h => h.id === recepcionId);
+            
+            if (!recepcion) {
+                showToast('❌ Error: No se encontró la recepción');
+                return;
+            }
+            
+            // Guardar recepción en historial
+            if (!historial.some(h => h.id === recepcionId)) {
+                historial.unshift(recepcion);
+            }
+            
+            // Crear nuevo inventario con los datos de la recepción
+            const hoy = new Date().toISOString().split('T')[0];
+            const nuevoInventario = {
+                id: `Inventario_${hoy}_${Date.now()}`,
+                tipo: 'Inventario',
+                fecha: hoy,
+                nombre: recepcion.nombre,
+                firma: recepcion.firma,
+                datos: {...recepcion.datos},
+                timestamp: new Date().getTime()
+            };
+            
+            historial.unshift(nuevoInventario);
+            localStorage.setItem('historial_conteos', JSON.stringify(historial));
+            
+            conteoActualGuardado = recepcion;
+            showToast('✅ Recepción guardada y nuevo inventario creado');
+            mostrarModalExportarConteo();
+        }
+        
+        function guardarEnHistorial(conteo) {
             let historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
             historial.unshift(conteo);
             localStorage.setItem('historial_conteos', JSON.stringify(historial));
@@ -2050,7 +2218,7 @@ if (currentBrand !== 'Todas') {
                         🔄 Ambos
                     </button>
                     <button onclick="cerrarFirmaModal()" style="flex: 1; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; font-size: 13px;">
-                        ✕ Solo guardar
+                        ✕ Cerrar
                     </button>
                 </div>
             `;
@@ -2220,7 +2388,13 @@ if (currentBrand !== 'Todas') {
             const workbook = new ExcelJS.Workbook();
             const worksheet = workbook.addWorksheet('Conteo');
             
-            // Header
+            // Metadata (filas 1-3)
+            worksheet.addRow(['FECHA', conteo.fecha]);
+            worksheet.addRow(['TIPO', conteo.tipo]);
+            worksheet.addRow(['RESPONSABLE', conteo.nombre]);
+            worksheet.addRow([]); // Fila vacía
+            
+            // Header (fila 5)
             worksheet.columns = [
                 { header: 'SKU', key: 'sku', width: 12 },
                 { header: 'Producto', key: 'producto', width: 50 },
@@ -2228,12 +2402,12 @@ if (currentBrand !== 'Todas') {
             ];
             
             // Estilos header
-            const headerRow = worksheet.getRow(1);
+            const headerRow = worksheet.getRow(5);
             headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF4a0404' } };
             headerRow.font = { color: { argb: 'FFFFFFFF' }, bold: true };
             
-            // Datos
-            let rowNum = 2;
+            // Datos (desde fila 6)
+            let rowNum = 6;
             let totalProductos = 0;
             
             Object.entries(conteo.datos).forEach(([sku, cantidad]) => {
@@ -2257,12 +2431,6 @@ if (currentBrand !== 'Todas') {
             const totalRow = worksheet.getRow(rowNum);
             totalRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFf0f0f0' } };
             totalRow.font = { bold: true };
-            
-            // Info adicional
-            rowNum += 3;
-            worksheet.getRow(rowNum).values = ['Responsable:', conteo.nombre];
-            worksheet.getRow(rowNum + 1).values = ['Fecha:', conteo.fecha];
-            worksheet.getRow(rowNum + 2).values = ['Tipo:', conteo.tipo];
             
             workbook.xlsx.writeBuffer().then(buffer => {
                 const blob = new Blob([buffer], { type: 'application/octet-stream' });
@@ -2342,18 +2510,80 @@ if (currentBrand !== 'Todas') {
                 return;
             }
             
-            container.innerHTML = historial.map(item => `
+            // Obtener término de búsqueda y filtro
+            const searchInput = document.getElementById('historySearchInput');
+            const filterType = document.getElementById('historyFilterType');
+            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+            const selectedType = filterType ? filterType.value : '';
+            
+            // Filtrar por fecha, número de guía, responsable y tipo
+            let filtrado = historial;
+            if (searchTerm || selectedType) {
+                filtrado = historial.filter(item => {
+                    const fecha = item.fecha || '';
+                    const numeroGuia = item.numeroGuia || '';
+                    const responsable = item.nombre || '';
+                    const tipo = item.tipo || '';
+                    
+                    const cumpleBusqueda = !searchTerm || 
+                           fecha.toLowerCase().includes(searchTerm) || 
+                           numeroGuia.toLowerCase().includes(searchTerm) ||
+                           responsable.toLowerCase().includes(searchTerm);
+                    
+                    const cumpletipo = !selectedType || tipo.includes(selectedType);
+                    
+                    return cumpleBusqueda && cumpletipo;
+                });
+            }
+            
+            if (filtrado.length === 0 && (searchTerm || selectedType)) {
+                container.innerHTML = '<div class="empty-state">No se encontraron registros</div>';
+                return;
+            }
+            
+            container.innerHTML = filtrado.map(item => `
                 <div style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
-                    <div>
-                        <div style="font-weight: 600; color: #1e293b; font-size: 14px;">${item.tipo}</div>
+                    <div style="flex: 1;">
+                        <div style="font-weight: 600; color: #1e293b; font-size: 14px;">
+                            ${item.tipo.includes('Recepción') ? `Guía de Despacho ${item.numeroGuia}` : 'Inventario'}
+                        </div>
                         <div style="font-size: 12px; color: #64748b; margin-top: 4px;">${item.fecha} • ${item.nombre}</div>
                     </div>
                     <div style="display: flex; gap: 8px;">
+                        <button onclick="cargarDelHistorial('${item.id}')" style="background: #059669; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;">📂 Abrir</button>
                         <button onclick="generarPDFDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;">PDF</button>
                         <button onclick="generarExcelDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;">Excel</button>
                     </div>
                 </div>
             `).join('');
+        }
+        
+        function cargarDelHistorial(id) {
+            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            const conteo = historial.find(c => c.id === id);
+            if (!conteo) {
+                showToast('❌ No se encontró el registro');
+                return;
+            }
+            
+            // Cargar datos según el tipo
+            if (conteo.tipo === 'Inventario') {
+                dataCount = {...conteo.datos};
+                currentBrand = 'Todos';
+                mainView = 'inventory';
+                switchMainView('inventory');
+                showToast('✅ Inventario cargado');
+            } else if (conteo.tipo.includes('Recepción')) {
+                dataReception = {...conteo.datos};
+                currentDocNumber = conteo.numeroGuia || '';
+                currentBrand = 'Todos';
+                mainView = 'reception';
+                switchMainView('reception');
+                showToast(`✅ Guía de despacho ${conteo.numeroGuia} cargada`);
+            }
+            
+            saveData();
+            renderProducts();
         }
         
         function generarPDFDesdeHistorial(id) {
@@ -2546,18 +2776,24 @@ if (currentBrand !== 'Todas') {
             const guideInput = document.getElementById('guideNumber');
             if (!guideInput) return;
             
-            // Obtener guías del historial
-            const savedGuides = Object.keys(localStorage).filter(key => key.startsWith('inv_recep_doc_')).map(key => {
-                return localStorage.getItem(key);
-            }).filter(Boolean);
+            // Obtener recepciones del historial
+            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            const recepciones = historial.filter(h => h.tipo.includes('Recepción'));
             
-            const uniqueGuides = [...new Set(savedGuides)];
+            if (recepciones.length === 0) return;
             
-            if (uniqueGuides.length === 0) return;
-            
-            let suggestionHtml = '<div style="position: absolute; top: 40px; left: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; max-height: 200px; overflow-y: auto; z-index: 1000;">';
-            uniqueGuides.forEach(guide => {
-                suggestionHtml += `<div style="padding: 8px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0;" onclick="setGuide('${guide}')">${guide}</div>`;
+            let suggestionHtml = '<div style="position: absolute; top: 40px; left: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">';
+            recepciones.forEach(rec => {
+                const numeroGuia = rec.numeroGuia || 'Sin número';
+                const fecha = rec.fecha || '';
+                suggestionHtml += `
+                    <div style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;" onclick="cargarRecepcionDelHistorial('${rec.id}')">
+                        <div>
+                            <div style="font-weight: 600; font-size: 13px;">Guía #${numeroGuia}</div>
+                            <div style="font-size: 12px; color: #64748b;">${fecha}</div>
+                        </div>
+                    </div>
+                `;
             });
             suggestionHtml += '</div>';
             
@@ -2568,7 +2804,69 @@ if (currentBrand !== 'Todas') {
         }
 
         function filterGuideSuggestions(value) {
-            showGuideSuggestions();
+            const guideInput = document.getElementById('guideNumber');
+            if (!guideInput) return;
+            
+            // Obtener recepciones del historial y filtrar
+            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            const recepciones = historial.filter(h => h.tipo.includes('Recepción'));
+            
+            const filtered = recepciones.filter(rec => {
+                const numeroGuia = rec.numeroGuia || '';
+                const fecha = rec.fecha || '';
+                const term = value.toLowerCase();
+                return numeroGuia.toLowerCase().includes(term) || fecha.toLowerCase().includes(term);
+            });
+            
+            if (filtered.length === 0) {
+                let existing = guideInput.parentElement.querySelector('[style*="position: absolute"]');
+                if (existing) existing.remove();
+                return;
+            }
+            
+            let suggestionHtml = '<div style="position: absolute; top: 40px; left: 0; background: white; border: 1px solid #e2e8f0; border-radius: 8px; width: 100%; max-height: 200px; overflow-y: auto; z-index: 1000; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">';
+            filtered.forEach(rec => {
+                const numeroGuia = rec.numeroGuia || 'Sin número';
+                const fecha = rec.fecha || '';
+                suggestionHtml += `
+                    <div style="padding: 10px 12px; cursor: pointer; border-bottom: 1px solid #f0f0f0; display: flex; justify-content: space-between; align-items: center;" onclick="cargarRecepcionDelHistorial('${rec.id}')">
+                        <div>
+                            <div style="font-weight: 600; font-size: 13px;">Guía #${numeroGuia}</div>
+                            <div style="font-size: 12px; color: #64748b;">${fecha}</div>
+                        </div>
+                    </div>
+                `;
+            });
+            suggestionHtml += '</div>';
+            
+            guideInput.parentElement.style.position = 'relative';
+            let existing = guideInput.parentElement.querySelector('[style*="position: absolute"]');
+            if (existing) existing.remove();
+            guideInput.parentElement.insertAdjacentHTML('beforeend', suggestionHtml);
+        }
+
+        function cargarRecepcionDelHistorial(recepcionId) {
+            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            const recepcion = historial.find(r => r.id === recepcionId);
+            
+            if (!recepcion) {
+                showToast('❌ No se encontró la recepción');
+                return;
+            }
+            
+            // Cargar datos de la recepción sin navegar
+            dataReception = {...recepcion.datos};
+            currentDocNumber = recepcion.numeroGuia || '';
+            document.getElementById('guideNumber').value = currentDocNumber;
+            
+            // Limpiar sugerencias
+            const guideInput = document.getElementById('guideNumber');
+            let existing = guideInput.parentElement.querySelector('[style*="position: absolute"]');
+            if (existing) existing.remove();
+            
+            saveData();
+            renderProducts();
+            showToast(`✅ Recepción #${currentDocNumber} cargada`);
         }
 
         function setGuide(guide) {
@@ -2669,29 +2967,8 @@ function showSuggestions() {
     }
     
     if (searchSuggestions.length === 0) {
-        // Mostrar historial si no hay búsqueda
-        if (searchHistory.length > 0) {
-            let html = `
-                <div class="suggestion-header">
-                    Búsquedas recientes
-                    <span class="clear-history" onclick="clearSearchHistory()">Limpiar</span>
-                </div>
-            `;
-            
-            searchHistory.slice(0, 5).forEach(term => {
-                html += `
-                    <div class="suggestion-item" onmousedown="selectSuggestion('${term}')">
-                        <svg class="suggestion-icon" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        <span class="suggestion-text">${term}</span>
-                    </div>
-                `;
-            });
-            
-            container.innerHTML = html;
-            container.classList.add('active');
-        }
+        container.innerHTML = '<div class="no-results">No se encontraron resultados</div>';
+        container.classList.add('active');
         return;
     }
     
@@ -3023,38 +3300,48 @@ function setupSearch() {
                     const ws = workbook.Sheets[workbook.SheetNames[0]];
                     const jsonData = XLSX.utils.sheet_to_json(ws, { header: 1 });
                     
+                    let tipo = '';
                     let numeroGuia = '';
                     let fecha = '';
+                    let responsable = '';
                     const productos = [];
                     
+                    // Leer metadata (filas 1-3)
+                    if (jsonData[0] && jsonData[0][0] === 'FECHA') fecha = jsonData[0][1];
+                    if (jsonData[1] && jsonData[1][0] === 'TIPO') tipo = jsonData[1][1];
+                    if (jsonData[2] && jsonData[2][0] === 'RESPONSABLE') responsable = jsonData[2][1];
+                    
+                    // Extraer número de guía si está en el tipo
+                    if (tipo && tipo.includes('Recepción')) {
+                        const match = tipo.match(/#(.+)/);
+                        if (match) numeroGuia = match[1];
+                    }
+                    
+                    // Buscar headers (fila 5)
+                    let headerRow = -1;
                     for (let i = 0; i < jsonData.length; i++) {
-                        const row = jsonData[i];
-                        if (row[0] === 'Nº Guía:' && row[1]) {
-                            numeroGuia = row[1].toString();
-                        }
-                        if (row[0] === 'Fecha:' && row[1]) {
-                            fecha = row[1];
-                        }
-                        
-                        if (row[0] === 'SKU' && row[1] === 'Descripción') {
-                            for (let j = i + 1; j < jsonData.length; j++) {
-                                const prodRow = jsonData[j];
-                                if (!prodRow[0] || prodRow[0] === '' || prodRow[0] === 'RESUMEN') break;
-                                
-                                productos.push({
-                                    sku: prodRow[0]?.toString() || '',
-                                    descripcion: prodRow[1] || '',
-                                    cantGuia: parseInt(prodRow[2]) || 0,
-                                    cantRecep: parseInt(prodRow[3]) || 0,
-                                    diferencia: parseInt(prodRow[4]) || 0,
-                                    comentario: prodRow[6] || ''
-                                });
-                            }
+                        if (jsonData[i][0] === 'SKU' && (jsonData[i][1] === 'Producto' || jsonData[i][1] === 'Descripción')) {
+                            headerRow = i;
                             break;
                         }
                     }
                     
-                    mostrarResumenImportacion(numeroGuia, fecha, productos);
+                    // Leer productos
+                    if (headerRow >= 0) {
+                        for (let j = headerRow + 1; j < jsonData.length; j++) {
+                            const row = jsonData[j];
+                            if (!row[0] || row[0] === 'TOTAL') break;
+                            
+                            productos.push({
+                                sku: row[0]?.toString() || '',
+                                descripcion: row[1] || '',
+                                cantidad: parseInt(row[2]) || 0
+                            });
+                        }
+                    }
+                    
+                    // Aplicar automáticamente si es local
+                    aplicarImportacionAutomatica(tipo, fecha, numeroGuia, responsable, productos);
                     
                 } catch (error) {
                     console.error('Error al importar:', error);
@@ -3063,6 +3350,199 @@ function setupSearch() {
             };
             
             reader.readAsArrayBuffer(file);
+        }
+        
+        async function importarGuidaPDF(file) {
+            if (!file) return;
+            
+            showToast('📄 Procesando guía PDF con OCR...');
+            
+            try {
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    try {
+                        // Convertir PDF a imagen primero
+                        const canvas = await convertirPDFaImagen(e.target.result);
+                        if (!canvas) {
+                            showToast('❌ Error al procesar el PDF');
+                            return;
+                        }
+                        
+                        // Obtener imagen en base64
+                        const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+                        
+                        // Enviar a Google Vision
+                        const response = await fetch('/.netlify/functions/process-guia', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ image: imageBase64 })
+                        });
+                        
+                        const result = await response.json();
+                        
+                        if (!result.success) {
+                            showToast('❌ ' + result.error);
+                            return;
+                        }
+                        
+                        const folio = result.folio || result.numeroFactura || '';
+                        const fecha = result.fechaOrden || result.fechaFactura || '';
+                        const productos = (result.productos || []).map(p => ({
+                            sku: p.codigo,
+                            descripcion: p.descripcion,
+                            cantidad: p.cantidad
+                        }));
+                        
+                        if (!folio || productos.length === 0) {
+                            showToast('❌ No se pudieron extraer los datos del PDF');
+                            return;
+                        }
+                        
+                        currentDocNumber = folio;
+                        document.getElementById('guideNumber').value = folio;
+                        
+                        mostrarConfirmacionProductos(folio, fecha, productos);
+                        
+                    } catch (error) {
+                        console.error('Error procesando PDF:', error);
+                        showToast('❌ Error al procesar el PDF: ' + error.message);
+                    }
+                };
+                reader.readAsArrayBuffer(file);
+            } catch (error) {
+                console.error('Error:', error);
+                showToast('❌ Error al leer el PDF');
+            }
+        }
+        
+        async function convertirPDFaImagen(pdfArrayBuffer) {
+            try {
+                // Cargar PDF.js si no está disponible
+                if (!window.pdfjsLib) {
+                    await cargarPDFJS();
+                }
+                
+                const pdf = await window.pdfjsLib.getDocument({data: pdfArrayBuffer}).promise;
+                const page = await pdf.getPage(1);
+                
+                const scale = 2;
+                const viewport = page.getViewport({scale: scale});
+                
+                const canvas = document.createElement('canvas');
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                
+                const context = canvas.getContext('2d');
+                await page.render({canvasContext: context, viewport: viewport}).promise;
+                
+                return canvas;
+            } catch (error) {
+                console.error('Error convirtiendo PDF:', error);
+                return null;
+            }
+        }
+        
+        async function cargarPDFJS() {
+            return new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js';
+                script.onload = () => {
+                    window.pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+                    resolve();
+                };
+                script.onerror = () => reject(new Error('No se pudo cargar PDF.js'));
+                document.head.appendChild(script);
+            });
+        }
+        
+        function mostrarConfirmacionProductos(folio, fecha, productos) {
+            // Modal para confirmar productos uno por uno
+            const modal = document.getElementById('shareModal');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            let html = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-weight: 600; color: #1e293b; font-size: 16px;">
+                        Guía de Despacho #${folio}
+                    </div>
+                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">
+                        Fecha: ${fecha} | ${productos.length} productos
+                    </div>
+                </div>
+                
+                <div style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
+            `;
+            
+            productos.forEach((p, idx) => {
+                html += `
+                    <div style="background: #f8fafc; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
+                        <div style="font-weight: 600; color: #1e293b; font-size: 13px;">
+                            ${p.sku} - ${p.descripcion}
+                        </div>
+                        <div style="color: #059669; font-weight: 600; font-size: 14px; margin-top: 4px;">
+                            ${p.cantidad} unidades
+                        </div>
+                    </div>
+                `;
+            });
+            
+            html += `
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="cargarProductosGuia('${folio}', ${JSON.stringify(productos).replace(/'/g, "\\'")})" 
+                            class="btn-cta" style="flex: 1;">
+                        ✅ Cargar todos
+                    </button>
+                    <button onclick="closeShareModal()" style="flex: 1; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                        ✕ Cancelar
+                    </button>
+                </div>
+            `;
+            
+            modal.querySelector('.modal-title').textContent = 'Confirmar Guía de Despacho';
+            modalContent.innerHTML = html;
+            modal.classList.add('active');
+        }
+        
+        function cargarProductosGuia(folio, productos) {
+            dataReception = {};
+            productos.forEach(p => {
+                dataReception[p.sku] = p.cantidad;
+            });
+            
+            currentDocNumber = folio;
+            saveData();
+            renderProducts();
+            closeShareModal();
+            showToast(`✅ Guía #${folio} cargada con ${productos.length} productos`);
+        }
+        
+        function aplicarImportacionAutomatica(tipo, fecha, numeroGuia, responsable, productos) {
+            if (tipo.includes('Inventario')) {
+                dataCount = {};
+                productos.forEach(p => {
+                    dataCount[p.sku] = p.cantidad;
+                });
+                currentBrand = 'Todos';
+                mainView = 'inventory';
+                switchMainView('inventory');
+                saveData();
+                renderProducts();
+                showToast(`✅ Inventario del ${fecha} cargado`);
+            } else if (tipo.includes('Recepción')) {
+                dataReception = {};
+                productos.forEach(p => {
+                    dataReception[p.sku] = p.cantidad;
+                });
+                currentDocNumber = numeroGuia;
+                currentBrand = 'Todos';
+                mainView = 'reception';
+                switchMainView('reception');
+                saveData();
+                renderProducts();
+                showToast(`✅ Recepción ${numeroGuia} cargada`);
+            }
         }
 
         function mostrarResumenImportacion(numeroGuia, fecha, productos) {
