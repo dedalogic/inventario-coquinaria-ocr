@@ -106,9 +106,25 @@ exports.handler = async (event) => {
     }
 
     const fullText = detections[0].description;
-    console.log('OCR Raw text:', fullText.substring(0, 200) + '...');
+    console.log('🔍 OCR detectado');
     
-    const resultado = procesarGuiaKitchenCenter(fullText);
+    // Detectar qué tipo de documento es
+    const esGuiaElectronica = /GUÍA DE DESPACHO\s+ELECTRÓNICA|N°\s*001\d+/i.test(fullText);
+    const esKitchenCenter = /KITCHEN CENTER|FOLIO\s*\[\s*\d+\s*\]/i.test(fullText);
+    
+    console.log(`📄 Tipo: ${esGuiaElectronica ? 'Guía Electrónica' : esKitchenCenter ? 'Kitchen Center' : 'Desconocido'}`);
+    
+    let resultado;
+    
+    if (esGuiaElectronica) {
+      resultado = procesarGuiaElectronica(fullText);
+    } else if (esKitchenCenter) {
+      resultado = procesarKitchenCenter(fullText);
+    } else {
+      resultado = procesarGuiaElectronica(fullText); // Intenta parsear como guía por defecto
+    }
+    
+    console.log(`✅ Resultado: ${resultado.productos.length} productos, Guía: ${resultado.numeroGuia}`);
 
     return {
       statusCode: 200,
@@ -134,9 +150,84 @@ exports.handler = async (event) => {
   }
 };
 
-function procesarGuiaKitchenCenter(texto) {
-  const lineas = texto.split('\n').map(l => l.trim()).filter(l => l);
+// PROCESAR GUÍA DE DESPACHO ELECTRÓNICA (foto)
+function procesarGuiaElectronica(texto) {
+  let numeroGuia = '';
+  let fecha = '';
+  let productos = [];
   
+  // EXTRAER NÚMERO DE GUÍA
+  const guiaMatch = texto.match(/N°\s*(\d{12})/i);
+  if (guiaMatch) {
+    numeroGuia = guiaMatch[1];
+  }
+  
+  // EXTRAER FECHA EMISIÓN
+  const fechaMatch = texto.match(/FECHA\s+EMISIÓN\s*:\s*(\d{2}\/\d{2}\/\d{4})/i);
+  if (fechaMatch) {
+    fecha = fechaMatch[1];
+  }
+  
+  console.log(`📋 Guía Electrónica: ${numeroGuia}, Fecha: ${fecha}`);
+  
+  // EXTRAER PRODUCTOS
+  // Formato: CÓDIGO | DESCRIPCIÓN | CANTIDAD | UNITARIO | TOTAL
+  const lineas = texto.split('\n');
+  let enTablaProductos = false;
+  
+  for (let i = 0; i < lineas.length; i++) {
+    const linea = lineas[i].trim();
+    
+    // Detectar inicio de tabla de productos (línea con "CÓDIGO")
+    if (linea.match(/CÓDIGO/i) && linea.match(/DESCRIPCIÓN/i)) {
+      enTablaProductos = true;
+      continue;
+    }
+    
+    // Si estamos en la tabla y encontramos SKU
+    if (enTablaProductos && linea.match(/^80\d{3}\s/)) {
+      // Patrón: 80XXX | descripción | cantidad | ... 
+      const productoMatch = linea.match(/^(80\d{3})\s+(.+?)\s+(\d+)\s+/);
+      
+      if (productoMatch) {
+        const sku = productoMatch[1];
+        const descripcion = productoMatch[2].trim();
+        const cantidad = parseInt(productoMatch[3]);
+        
+        if (sku && cantidad > 0) {
+          productos.push({
+            codigo: sku,
+            descripcion: descripcion,
+            cantidad: cantidad,
+            recepcion: cantidad,
+            diferencia: 0
+          });
+          console.log(`  ✓ ${sku}: ${descripcion.substring(0, 40)}... (${cantidad} un.)`);
+        }
+      }
+    }
+    
+    // Salir de la tabla si llegamos a totales
+    if (enTablaProductos && (linea.match(/TOTAL/i) || linea.match(/^Total/))) {
+      break;
+    }
+  }
+  
+  return {
+    numeroGuia: numeroGuia,
+    numeroFactura: numeroGuia,
+    fechaFactura: fecha,
+    fechaOrden: fecha,
+    folio: numeroGuia,
+    tienda: '',
+    productos: productos,
+    cantidadProductos: productos.length,
+    totalUnidades: productos.reduce((sum, p) => sum + p.cantidad, 0)
+  };
+}
+
+// PROCESAR KITCHEN CENTER (PDF)
+function procesarKitchenCenter(texto) {
   let numeroFactura = '';
   let fechaFactura = '';
   let fechaOrden = '';
@@ -144,96 +235,83 @@ function procesarGuiaKitchenCenter(texto) {
   let tienda = '';
   let productos = [];
   
+  // DETECTAR FOLIO
+  const folioMatch = texto.match(/FOLIO\s*\[\s*(\d+)\s*\]/i);
+  if (folioMatch) {
+    folio = folioMatch[1];
+  }
+  
   // DETECTAR NÚMERO DE FACTURA
-  const facturaMatch = texto.match(/Factura\s*[:\s]*(\d+)/i);
+  const facturaMatch = texto.match(/Factura\s*:\s*(\d+)/i);
   if (facturaMatch) {
     numeroFactura = facturaMatch[1];
   }
   
   // DETECTAR FECHA FACTURA
-  const fechaFacturaMatch = texto.match(/Fecha\s+Factura\s*[:\s]*(\d{2}\/\d{2}\/\d{4})/i);
+  const fechaFacturaMatch = texto.match(/Fecha\s+Factura\s*:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
   if (fechaFacturaMatch) {
     fechaFactura = fechaFacturaMatch[1];
   }
   
   // DETECTAR FECHA ORDEN DE COMPRA
-  const fechaOrdenMatch = texto.match(/Fecha\s+Orden\s+de\s+Compra\s*[:\s]*(\d{2}\/\d{2}\/\d{4})/i);
+  const fechaOrdenMatch = texto.match(/Fecha\s+Orden\s+de\s+Compra\s*:\s*(\d{1,2}\/\d{1,2}\/\d{4})/i);
   if (fechaOrdenMatch) {
     fechaOrden = fechaOrdenMatch[1];
   }
   
-  // DETECTAR FOLIO - múltiples patrones
-  let folioMatch = texto.match(/FOLIO\s*\[\s*(\d+)\s*\]/i);
-  if (!folioMatch) {
-    folioMatch = texto.match(/FOLIO\s*[:\s]*(\d+)/i);
-  }
-  if (!folioMatch) {
-    folioMatch = texto.match(/Folio\s*[:\s]*(\d+)/i);
-  }
-  if (folioMatch) {
-    folio = folioMatch[1];
-  }
-  
   // DETECTAR TIENDA
-  const tiendaMatch = texto.match(/Tienda\s*[:\s]*(COQUINARIA[^\n]+)/i);
+  const tiendaMatch = texto.match(/Tienda\s*:\s*([^\n]+)/i);
   if (tiendaMatch) {
-    tienda = tiendaMatch[1];
+    tienda = tiendaMatch[1].trim();
   }
   
-  // DETECTAR PRODUCTOS - más robusto
+  console.log(`📋 Kitchen Center - Folio: ${folio}, Factura: ${numeroFactura}`);
+  
+  // PROCESAR PRODUCTOS
+  // Formato: 80XXX descripción 80XXX cantidad recepción diferencia ...
+  const lineas = texto.split('\n');
+  
   for (let i = 0; i < lineas.length; i++) {
-    const linea = lineas[i];
+    const linea = lineas[i].trim();
     
-    // Buscar código que empiece con 80 y tenga 5 dígitos
-    if (linea.match(/^80\d{3}$/)) {
-      const codigo = linea;
-      let descripcion = '';
-      let cantidad = 0;
-      let recepcion = 0;
-      let diferencia = 0;
+    // Buscar líneas que empiezan con 80XXX
+    if (linea.match(/^80\d{3}\s/)) {
+      // Patrón: 80XXX descripción 80XXX cantidad recepción diferencia precio total
+      const productoMatch = linea.match(
+        /^(80\d{3})\s+(.+?)\s+(80\d{3})\s+(\d+)\s+(\d+)\s+(\d+)/
+      );
       
-      // Buscar descripción en las siguientes líneas
-      for (let j = i + 1; j < Math.min(i + 5, lineas.length); j++) {
-        const siguienteLinea = lineas[j];
+      if (productoMatch) {
+        const sku = productoMatch[1];
+        const descripcion = productoMatch[2].trim();
+        const cantidad = parseInt(productoMatch[4]);
+        const recepcion = parseInt(productoMatch[5]);
+        const diferencia = parseInt(productoMatch[6]);
         
-        if (siguienteLinea.length > 10 && 
-            !siguienteLinea.match(/^[\d\s]+$/) &&
-            !siguienteLinea.match(/^80\d{3}/) &&
-            !siguienteLinea.match(/TOTAL|Proveedor|Dirección|Comuna|Ciudad|Factura|NETO|IVA|RUT|Orden/i)) {
-          
-          descripcion = siguienteLinea.replace(/80\d{3}\s*$/, '').trim();
-          
-          // Buscar números después de la descripción
-          for (let k = j + 1; k < Math.min(j + 5, lineas.length); k++) {
-            const numeroLinea = lineas[k];
-            
-            // Patrón: cantidad recepcion diferencia
-            const numMatch = numeroLinea.match(/^(\d+)\s+(\d+)\s+(\d+)/);
-            if (numMatch) {
-              cantidad = parseInt(numMatch[1]);
-              recepcion = parseInt(numMatch[2]);
-              diferencia = parseInt(numMatch[3]);
-              break;
-            }
-          }
-          break;
+        if (sku && cantidad > 0) {
+          productos.push({
+            codigo: sku,
+            descripcion: descripcion,
+            cantidad: cantidad,
+            recepcion: recepcion,
+            diferencia: diferencia
+          });
+          console.log(`  ✓ ${sku}: ${descripcion.substring(0, 40)}... (${cantidad} un.)`);
         }
-      }
-      
-      if (codigo && descripcion && cantidad > 0) {
-        productos.push({
-          codigo,
-          descripcion,
-          cantidad,
-          recepcion,
-          diferencia
-        });
       }
     }
   }
   
-  console.log(`✅ Productos detectados: ${productos.length}`);
-  console.log(`📋 Folio: ${folio}, Factura: ${numeroFactura}`);
+  // Eliminar duplicados
+  const productosUnicos = [];
+  const skusVistos = new Set();
+  
+  productos.forEach(prod => {
+    if (!skusVistos.has(prod.codigo)) {
+      skusVistos.add(prod.codigo);
+      productosUnicos.push(prod);
+    }
+  });
   
   return {
     numeroGuia: numeroFactura || folio,
@@ -242,8 +320,8 @@ function procesarGuiaKitchenCenter(texto) {
     fechaOrden,
     folio,
     tienda,
-    productos,
-    cantidadProductos: productos.length,
-    totalUnidades: productos.reduce((sum, p) => sum + p.cantidad, 0)
+    productos: productosUnicos,
+    cantidadProductos: productosUnicos.length,
+    totalUnidades: productosUnicos.reduce((sum, p) => sum + p.cantidad, 0)
   };
 }
