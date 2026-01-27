@@ -3266,8 +3266,61 @@ function setupSearch() {
             XLSX.writeFile(wb, fileName);
             
             showToast('✅ Recepción exportada a Excel');
-        }
+        
+    }
+async function procesarArchivoConIA(archivo) {
+    const reader = new FileReader();
+    
+    reader.onload = async (e) => {
+        const base64 = e.target.result;
+        
+        try {
+            const response = await fetch('/.netlify/functions/process-guia', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: base64 })
+            });
 
+            // IMPORTANTE: Solo leemos el body una vez aquí
+            const resultado = await response.json();
+
+            if (resultado.success) {
+                ejecutarSumaInventario(resultado);
+            } else {
+                alert("Error en el escaneo: " + resultado.error);
+            }
+        } catch (err) {
+            console.error("Fallo de red o servidor:", err);
+            alert("No se pudo conectar con el servicio de IA.");
+        }
+    };
+    
+    reader.readAsDataURL(archivo);
+}
+
+function ejecutarSumaInventario(data) {
+    let itemsActualizados = 0;
+
+    data.productos.forEach(pIA => {
+        // Buscamos en tu lista global 'products'
+        const item = products.find(p => p.sku === pIA.sku);
+        
+        if (item) {
+            // Suma al stock maestro
+            item.units = (parseInt(item.units) || 0) + pIA.unidades;
+            
+            // Registro en la recepción del documento actual
+            dataReception[pIA.sku] = (dataReception[pIA.sku] || 0) + pIA.unidades;
+            itemsActualizados++;
+        }
+    });
+
+    // Sincronizar UI y Almacenamiento
+    if (typeof saveData === 'function') saveData();
+    if (typeof renderProducts === 'function') renderProducts();
+
+    alert(`✅ Factura ${data.numeroGuia} procesada.\nSe actualizaron ${itemsActualizados} productos.`);
+}
         async function importarExcelRecepcion(file) {
             const XLSX = await cargarLibreriaXLSX();
             
