@@ -3621,6 +3621,12 @@ function ejecutarSumaInventario(data) {
         }
         
         function mostrarConfirmacionProductos(numeroFactura, fecha, productos) {
+            // Guardar datos en variable global para evitar problemas con JSON en onclick
+            window.tempProductosCargar = {
+                numeroFactura: numeroFactura,
+                productos: productos
+            };
+            
             // Modal para confirmar productos uno por uno
             const modal = document.getElementById('shareModal');
             const modalContent = modal.querySelector('.modal-content');
@@ -3655,8 +3661,7 @@ function ejecutarSumaInventario(data) {
                 </div>
                 
                 <div style="display: flex; gap: 10px;">
-                    <button onclick="cargarProductosGuia('${numeroFactura}', ${JSON.stringify(productos).replace(/'/g, "\\'")})" 
-                            class="btn-cta" style="flex: 1;">
+                    <button onclick="cargarProductosGuia()" class="btn-cta" style="flex: 1;">
                         ✅ Cargar todos
                     </button>
                     <button onclick="closeShareModal()" style="flex: 1; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
@@ -3670,7 +3675,14 @@ function ejecutarSumaInventario(data) {
             modal.classList.add('active');
         }
         
-        function cargarProductosGuia(numeroFactura, productos) {
+        function cargarProductosGuia() {
+            if (!window.tempProductosCargar) {
+                showToast('❌ Error: No hay datos para cargar');
+                return;
+            }
+            
+            const { numeroFactura, productos } = window.tempProductosCargar;
+            
             dataReception = {};
             productos.forEach(p => {
                 dataReception[p.sku] = p.cantidad;
@@ -3681,6 +3693,9 @@ function ejecutarSumaInventario(data) {
             renderProducts();
             closeShareModal();
             showToast(`✅ Factura #${numeroFactura} cargada con ${productos.length} productos`);
+            
+            // Limpiar variable temporal
+            window.tempProductosCargar = null;
         }
         
         function aplicarImportacionAutomatica(tipo, fecha, numeroGuia, responsable, productos) {
