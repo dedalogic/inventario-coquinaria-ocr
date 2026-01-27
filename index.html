@@ -3461,7 +3461,7 @@ function ejecutarSumaInventario(data) {
                             return;
                         }
                         
-                        const folio = result.folio || result.numeroFactura || result.numeroGuia || '';
+                        const folio = result.numeroFactura || result.numeroGuia || result.folio || '';
                         const fecha = result.fechaOrden || result.fechaFactura || '';
                         const productos = (result.productos || []).map(p => ({
                             sku: p.codigo,
@@ -3620,7 +3620,7 @@ function ejecutarSumaInventario(data) {
             });
         }
         
-        function mostrarConfirmacionProductos(folio, fecha, productos) {
+        function mostrarConfirmacionProductos(numeroFactura, fecha, productos) {
             // Modal para confirmar productos uno por uno
             const modal = document.getElementById('shareModal');
             const modalContent = modal.querySelector('.modal-content');
@@ -3628,7 +3628,7 @@ function ejecutarSumaInventario(data) {
             let html = `
                 <div style="text-align: center; margin-bottom: 20px;">
                     <div style="font-weight: 600; color: #1e293b; font-size: 16px;">
-                        Guía de Despacho #${folio}
+                        Factura #${numeroFactura}
                     </div>
                     <div style="font-size: 13px; color: #64748b; margin-top: 5px;">
                         Fecha: ${fecha} | ${productos.length} productos
@@ -3655,7 +3655,7 @@ function ejecutarSumaInventario(data) {
                 </div>
                 
                 <div style="display: flex; gap: 10px;">
-                    <button onclick="cargarProductosGuia('${folio}', ${JSON.stringify(productos).replace(/'/g, "\\'")})" 
+                    <button onclick="cargarProductosGuia('${numeroFactura}', ${JSON.stringify(productos).replace(/'/g, "\\'")})" 
                             class="btn-cta" style="flex: 1;">
                         ✅ Cargar todos
                     </button>
@@ -3665,22 +3665,22 @@ function ejecutarSumaInventario(data) {
                 </div>
             `;
             
-            modal.querySelector('.modal-title').textContent = 'Confirmar Guía de Despacho';
+            modal.querySelector('.modal-title').textContent = 'Confirmar Factura';
             modalContent.innerHTML = html;
             modal.classList.add('active');
         }
         
-        function cargarProductosGuia(folio, productos) {
+        function cargarProductosGuia(numeroFactura, productos) {
             dataReception = {};
             productos.forEach(p => {
                 dataReception[p.sku] = p.cantidad;
             });
             
-            currentDocNumber = folio;
+            currentDocNumber = numeroFactura;
             saveData();
             renderProducts();
             closeShareModal();
-            showToast(`✅ Guía #${folio} cargada con ${productos.length} productos`);
+            showToast(`✅ Factura #${numeroFactura} cargada con ${productos.length} productos`);
         }
         
         function aplicarImportacionAutomatica(tipo, fecha, numeroGuia, responsable, productos) {
