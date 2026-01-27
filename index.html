@@ -3822,21 +3822,24 @@ function iniciarRecepcionGuia() {
         return;
     }
     
-    const { productos, numeroGuia } = window.tempRecepcionData;
+    const { productos, numeroGuia, numeroFactura } = window.tempRecepcionData;
     
     recepcionActual = {
-        numeroGuia: numeroGuia,
+        numeroGuia: numeroFactura || numeroGuia,
         productos: productos,
         index: 0,
         verificados: []
     };
     
-    currentDocNumber = numeroGuia;
+    currentDocNumber = numeroFactura || numeroGuia;
     const docInput = document.getElementById('docNumberInput');
-    if (docInput) docInput.value = numeroGuia;
+    if (docInput) docInput.value = currentDocNumber;
     
+    // Cerrar modal actual y esperar un momento antes de mostrar el siguiente
     closeShareModal();
-    mostrarVerificacionProducto();
+    setTimeout(() => {
+        mostrarVerificacionProducto();
+    }, 100);
 }
 
 function mostrarVerificacionProducto() {
