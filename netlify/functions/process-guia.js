@@ -33,49 +33,47 @@ exports.handler = async (event) => {
         requests: [{
           inputConfig: { mimeType: 'application/pdf', content: base64Data },
           features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
-          pages: [1]
+          pages: [1] // Procesamos la primera página
         }]
       };
       const [result] = await client.batchAnnotateFiles(request);
-      fullText = result.responses[0].responses.map(r => r.fullTextAnnotation ? r.fullTextAnnotation.text : "").join("\n");
+      const fileResponse = result.responses[0];
+      if (fileResponse && fileResponse.responses) {
+        fullText = fileResponse.responses.map(r => r.fullTextAnnotation ? r.fullTextAnnotation.text : "").join("\n");
+      }
     } else {
       const [result] = await client.documentTextDetection({ image: { content: base64Data } });
       fullText = result.fullTextAnnotation ? result.fullTextAnnotation.text : '';
     }
 
-    // --- PROCESAMIENTO DE CABECERA ---
+    if (!fullText) throw new Error("No se pudo extraer texto del documento");
+
+    // --- EXTRACCIÓN DE CABECERA (FACTURA Y FECHA) ---
     
-    // 1. Extraer Fecha (Busca "Fecha Orden de Compra" o "Fecha Factura")
-    const fechaMatch = fullText.match(/Fecha\s+(?:Orden\s+de\s+Compra|Factura|Guía|Guia)[\s:]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
+    // Buscamos Factura, si no está, usamos Folio (como en tu PDF G.pdf)
+    const facturaMatch = fullText.match(/FACTURA\s*[:#]?\s*(\d+)/i) || fullText.match(/FOLIO\s*[\[:]*\s*(\d+)/i);
+    const numeroGuia = facturaMatch ? facturaMatch[1] : "No detectado";
+
+    // Buscamos la fecha de factura o de orden
+    const fechaMatch = fullText.match(/Fecha\s+(?:Factura|Orden|Emisión|Guía)[\s:]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
     const fechaGuia = fechaMatch ? fechaMatch[1] : "No detectada";
 
-    // 2. Extraer Número de Factura/Folio
-    const idGuiaMatch = fullText.match(/(?:FACTURA|FOLIO|NRO|GUIA)[\s:\[]*(\d+)/i);
-    const numeroGuia = idGuiaMatch ? idGuiaMatch[1] : "No detectado";
+    // --- EXTRACCIÓN DE PRODUCTOS (Lógica Global) ---
+    // Limpiamos el texto de ruidos del OCR (comillas y saltos de línea innecesarios)
+    const cleanText = fullText.replace(/"/g, '').replace(/[\r\n]+/g, ' ');
 
-    // --- PROCESAMIENTO DE PRODUCTOS ---
-    const lineas = fullText.split('\n');
     const productos = [];
-
-    lineas.forEach(linea => {
-      // Patron específico: SKU -> Descripción -> SKU -> Cantidad
-      // Ejemplo en tu PDF: "80172","Tartina de alachofa...","80172","12"
-      const match = linea.match(/(80\d{3})[\s",]+(.+?)[\s",]+(80\d{3})[\s",]+(\d+)/);
-      
-      if (match) {
-        const sku = match[1];
-        const nombre = match[2].replace(/[",\r\n\\]/g, '').trim();
-        const cantidad = parseInt(match[4]);
-
-        if (!productos.some(p => p.sku === sku)) {
-          productos.push({
-            sku: sku,
-            nombre: nombre,
-            unidades: cantidad
-          });
-        }
-      }
-    });
+    // Patrón: SKU (80xxx) -> Texto (Nombre) -> SKU (Repetido) -> Cantidad
+    const productRegex = /(80\d{3})\s+(.+?)\s+\1\s+(\d+)/g;
+    
+    let match;
+    while ((match = productRegex.exec(cleanText)) !== null) {
+      productos.push({
+        sku: match[1],
+        nombre: match[2].trim(),
+        unidades: parseInt(match[3])
+      });
+    }
 
     return {
       statusCode: 200,
@@ -85,11 +83,15 @@ exports.handler = async (event) => {
         numeroGuia,
         fecha: fechaGuia,
         productos,
-        count: productos.length
+        debugText: cleanText.substring(0, 200) // Para verificar si leyó bien
       })
     };
 
   } catch (error) {
-    return { statusCode: 500, body: JSON.stringify({ success: false, error: error.message }) };
+    console.error("Error OCR:", error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ success: false, error: error.message })
+    };
   }
 };
