@@ -2028,6 +2028,7 @@ if (currentBrand !== 'Todas') {
         }
         
         let conteoActualGuardado = null;
+        let conteoTemporal = null;
         
         function guardarConteoConFirma(tipo, nombre, firmaDataURL) {
             const hoy = new Date().toISOString().split('T')[0];
@@ -2060,6 +2061,16 @@ if (currentBrand !== 'Todas') {
         }
         
         function mostrarOpcionesRecepcion(conteo) {
+            // CORRECCIÓN: Guardar el conteo temporalmente Y en historial
+            conteoTemporal = conteo;
+            
+            // Guardar inmediatamente en historial
+            let historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            if (!historial.some(h => h.id === conteo.id)) {
+                historial.unshift(conteo);
+                localStorage.setItem('historial_conteos', JSON.stringify(historial));
+            }
+            
             const modal = document.getElementById('firmaModal');
             const modalContent = document.getElementById('firmaModalContent');
             
@@ -2079,7 +2090,7 @@ if (currentBrand !== 'Todas') {
                             class="btn-cta" style="width: 100%;">
                         📋 Crear inventario nuevo
                     </button>
-                    <button onclick="cerrarFirmaModal()" style="width: 100%; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    <button onclick="soloGuardarRecepcion()" style="width: 100%; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
                         ✕ Solo guardar recepción
                     </button>
                 </div>
@@ -2089,26 +2100,35 @@ if (currentBrand !== 'Todas') {
             modalContent.innerHTML = html;
         }
         
+        function soloGuardarRecepcion() {
+            // Ya está guardado, solo mostrar confirmación y cerrar
+            conteoActualGuardado = conteoTemporal;
+            showToast('✅ Recepción guardada');
+            mostrarModalExportarConteo();
+        }
+        
         function guardarRecepcionYAgregarAlInventario(recepcionId) {
-            // Guardar la recepción primero
-            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
-            const recepcion = historial.find(h => h.id === recepcionId);
+            let historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            let recepcion = historial.find(h => h.id === recepcionId);
             
             if (!recepcion) {
-                showToast('❌ Error: No se encontró la recepción');
-                return;
-            }
-            
-            // Guardar recepción en historial
-            if (!historial.some(h => h.id === recepcionId)) {
-                historial.unshift(recepcion);
+                // Fallback: usar el conteo temporal
+                if (conteoTemporal && conteoTemporal.id === recepcionId) {
+                    recepcion = conteoTemporal;
+                    historial.unshift(recepcion);
+                    localStorage.setItem('historial_conteos', JSON.stringify(historial));
+                } else {
+                    showToast('❌ Error: No se encontró la recepción');
+                    return;
+                }
             }
             
             // Buscar último inventario
             const ultimoInventario = historial.find(h => h.tipo === 'Inventario');
             
             if (!ultimoInventario) {
-                showToast('❌ No hay inventario anterior para agregar');
+                showToast('❌ No hay inventario anterior. Creando nuevo inventario...');
+                guardarRecepcionComoNuevo(recepcionId);
                 return;
             }
             
@@ -2130,18 +2150,20 @@ if (currentBrand !== 'Todas') {
         }
         
         function guardarRecepcionComoNuevo(recepcionId) {
-            // Guardar la recepción
-            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
-            const recepcion = historial.find(h => h.id === recepcionId);
+            let historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            let recepcion = historial.find(h => h.id === recepcionId);
             
             if (!recepcion) {
-                showToast('❌ Error: No se encontró la recepción');
-                return;
-            }
-            
-            // Guardar recepción en historial
-            if (!historial.some(h => h.id === recepcionId)) {
-                historial.unshift(recepcion);
+                // Fallback: usar el conteo temporal
+                if (conteoTemporal && conteoTemporal.id === recepcionId) {
+                    recepcion = conteoTemporal;
+                    if (!historial.some(h => h.id === recepcionId)) {
+                        historial.unshift(recepcion);
+                    }
+                } else {
+                    showToast('❌ Error: No se encontró la recepción');
+                    return;
+                }
             }
             
             // Crear nuevo inventario con los datos de la recepción
