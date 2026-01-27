@@ -1,84 +1,165 @@
-const { ImageAnnotatorClient } = require('@google-cloud/vision');
-
-let visionClient;
-
-const getVisionClient = () => {
-  if (!visionClient) {
-    const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
-    visionClient = new ImageAnnotatorClient({ credentials });
-  }
-  return visionClient;
-};
+// process-guia.js - Usando Gemini 2.0 Flash (gratuito hasta 1500 req/día)
 
 exports.handler = async (event) => {
-  // Manejo de CORS para evitar bloqueos
+  // CORS
   if (event.httpMethod === 'OPTIONS') {
-    return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type" }, body: '' };
+    return {
+      statusCode: 200,
+      headers: {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Headers": "Content-Type"
+      },
+      body: ''
+    };
   }
 
   try {
     const body = JSON.parse(event.body);
     const { image } = body;
 
-    if (!image) throw new Error("No se recibió la imagen o PDF");
-
-    const client = getVisionClient();
-    const base64Data = image.split(',')[1] || image;
-    const isPDF = image.includes('application/pdf') || image.startsWith('JVBERi0');
-
-    let fullText = "";
-
-    if (isPDF) {
-      const request = {
-        requests: [{
-          inputConfig: { mimeType: 'application/pdf', content: base64Data },
-          features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
-          pages: [1]
-        }]
-      };
-      const [result] = await client.batchAnnotateFiles(request);
-      const responses = result.responses[0].responses || [];
-      fullText = responses.map(r => r.fullTextAnnotation ? r.fullTextAnnotation.text : "").join("\n");
-    } else {
-      const [result] = await client.documentTextDetection({ image: { content: base64Data } });
-      fullText = result.fullTextAnnotation ? result.fullTextAnnotation.text : '';
+    if (!image) {
+      throw new Error("No se recibió la imagen");
     }
 
-    if (!fullText) throw new Error("El OCR no devolvió texto");
-
-    // Extracción de datos
-    const facturaMatch = fullText.match(/(?:FACTURA|FOLIO|NRO)[\s:\[]*(\d+)/i);
-    const fechaMatch = fullText.match(/Fecha[\s\w]*[:]*\s*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
+    // Extraer base64 limpio (sin el prefijo data:image/...)
+    const base64Data = image.includes(',') ? image.split(',')[1] : image;
     
-    const textoLimpio = fullText.replace(/[\r\n]+/g, ' ').replace(/"/g, '');
-    const productos = [];
-    const regexKC = /(80\d{3})\s+(.+?)\s+\1\s+(\d+)/g;
+    // Detectar tipo de archivo
+    let mimeType = 'image/jpeg';
+    if (image.includes('data:image/png')) mimeType = 'image/png';
+    if (image.includes('data:application/pdf') || image.startsWith('JVBERi0')) mimeType = 'application/pdf';
 
-    let match;
-    while ((match = regexKC.exec(textoLimpio)) !== null) {
-      productos.push({
-        sku: match[1],
-        nombre: match[2].trim(),
-        unidades: parseInt(match[3])
-      });
+    // Llamar a Gemini 2.0 Flash
+    const geminiResponse = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              {
+                inline_data: {
+                  mime_type: mimeType,
+                  data: base64Data
+                }
+              },
+              {
+                text: `Analiza esta imagen de una guía de despacho o factura de Kitchen Center Chile.
+
+EXTRAE LA SIGUIENTE INFORMACIÓN:
+
+1. NÚMERO DE FACTURA o GUÍA (busca "Factura", "Folio", "N°", "Nro")
+2. FECHA del documento
+3. LISTA DE PRODUCTOS con formato:
+   - Código/SKU (números de 5 dígitos que empiezan con 80, ej: 80123)
+   - Descripción del producto
+   - Cantidad/Unidades
+
+RESPONDE ÚNICAMENTE en este formato JSON exacto, sin markdown ni explicaciones:
+{
+  "numeroFactura": "123456",
+  "folio": "123456",
+  "fechaFactura": "27/01/2025",
+  "tienda": "nombre de tienda si aparece",
+  "productos": [
+    {"codigo": "80123", "descripcion": "Nombre del producto", "cantidad": 5},
+    {"codigo": "80456", "descripcion": "Otro producto", "cantidad": 3}
+  ],
+  "totalUnidades": 8
+}
+
+IMPORTANTE:
+- Los SKU de Kitchen Center SIEMPRE empiezan con 80 y tienen 5 dígitos
+- Si un producto aparece varias veces, suma las cantidades
+- Si no encuentras algún dato, usa "" para texto o 0 para números
+- Responde SOLO el JSON, nada más`
+              }
+            ]
+          }],
+          generationConfig: {
+            temperature: 0.1,
+            maxOutputTokens: 4096
+          }
+        })
+      }
+    );
+
+    if (!geminiResponse.ok) {
+      const errorText = await geminiResponse.text();
+      console.error('Error Gemini:', errorText);
+      throw new Error(`Error de Gemini: ${geminiResponse.status}`);
     }
+
+    const geminiData = await geminiResponse.json();
+    
+    // Extraer el texto de la respuesta
+    const responseText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text || '';
+    
+    if (!responseText) {
+      throw new Error('Gemini no devolvió respuesta');
+    }
+
+    // Limpiar el JSON (quitar posibles backticks de markdown)
+    let cleanJson = responseText
+      .replace(/```json\n?/g, '')
+      .replace(/```\n?/g, '')
+      .trim();
+
+    // Parsear el JSON
+    let parsedData;
+    try {
+      parsedData = JSON.parse(cleanJson);
+    } catch (parseError) {
+      console.error('JSON recibido:', cleanJson);
+      throw new Error('No se pudo parsear la respuesta de Gemini');
+    }
+
+    // Validar y limpiar productos
+    const productosLimpios = (parsedData.productos || [])
+      .filter(p => p.codigo && p.codigo.toString().startsWith('80'))
+      .map(p => ({
+        codigo: p.codigo.toString(),
+        descripcion: p.descripcion || '',
+        cantidad: parseInt(p.cantidad) || 0
+      }));
+
+    // Calcular total si no viene
+    const totalUnidades = parsedData.totalUnidades || 
+      productosLimpios.reduce((sum, p) => sum + p.cantidad, 0);
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      },
       body: JSON.stringify({
         success: true,
-        numeroGuia: facturaMatch ? facturaMatch[1] : "S/N",
-        fecha: fechaMatch ? fechaMatch[1] : "S/F",
-        productos
+        numeroFactura: parsedData.numeroFactura || parsedData.folio || "S/N",
+        folio: parsedData.folio || parsedData.numeroFactura || "S/N",
+        fechaFactura: parsedData.fechaFactura || "",
+        tienda: parsedData.tienda || "",
+        productos: productosLimpios,
+        totalUnidades: totalUnidades,
+        // Compatibilidad con formato antiguo
+        numeroGuia: parsedData.numeroFactura || parsedData.folio || "S/N",
+        fecha: parsedData.fechaFactura || ""
       })
     };
 
   } catch (err) {
+    console.error('Error en process-guia:', err);
     return {
       statusCode: 500,
-      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
-      body: JSON.stringify({ success: false, error: err.message })
+      headers: {
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      },
+      body: JSON.stringify({
+        success: false,
+        error: err.message || 'Error procesando la guía'
+      })
     };
   }
 };
