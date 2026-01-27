@@ -5,7 +5,7 @@ let visionClient;
 const getVisionClient = () => {
   if (!visionClient) {
     if (!process.env.GOOGLE_CREDENTIALS) {
-      throw new Error('GOOGLE_CREDENTIALS no configuradas');
+      throw new Error('GOOGLE_CREDENTIALS no configurada');
     }
     const credentials = JSON.parse(process.env.GOOGLE_CREDENTIALS);
     visionClient = new ImageAnnotatorClient({ credentials });
@@ -16,88 +16,62 @@ const getVisionClient = () => {
 exports.handler = async (event) => {
   try {
     const body = typeof event.body === 'string' ? JSON.parse(event.body) : event.body;
-    const { image } = body; // Aquí recibimos el base64
+    const { image } = body;
 
     if (!image) {
-      return {
-        statusCode: 400,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ success: false, error: 'No se recibió archivo' })
-      };
+      return { statusCode: 400, body: JSON.stringify({ success: false, error: 'Sin archivo' }) };
     }
 
     const client = getVisionClient();
     const base64Data = image.split(',')[1] || image;
-    
-    // Detectamos si es PDF revisando la cabecera del base64
     const isPDF = image.includes('application/pdf') || image.startsWith('JVBERi0');
 
     let fullText = "";
 
     if (isPDF) {
-      // Lógica para PDF (Soporta hasta 5 páginas síncronamente)
       const request = {
         requests: [{
-          inputConfig: {
-            mimeType: 'application/pdf',
-            content: base64Data,
-          },
+          inputConfig: { mimeType: 'application/pdf', content: base64Data },
           features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
-          pages: [1] // Solo procesamos la primera página para rapidez
+          pages: [1]
         }]
       };
       const [result] = await client.batchAnnotateFiles(request);
-      // Extraemos el texto de la respuesta de archivo
-      const responses = result.responses[0].responses;
-      fullText = responses.map(r => r.fullTextAnnotation ? r.fullTextAnnotation.text : "").join("\n");
+      fullText = result.responses[0].responses.map(r => r.fullTextAnnotation ? r.fullTextAnnotation.text : "").join("\n");
     } else {
-      // Lógica para IMÁGENES
-      const [result] = await client.documentTextDetection({
-        image: { content: base64Data }
-      });
+      const [result] = await client.documentTextDetection({ image: { content: base64Data } });
       fullText = result.fullTextAnnotation ? result.fullTextAnnotation.text : '';
     }
 
-    if (!fullText) {
-      return {
-        statusCode: 200,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ success: false, error: 'No se pudo extraer texto' })
-      };
-    }
+    // --- PROCESAMIENTO DE CABECERA ---
+    
+    // 1. Extraer Fecha (Busca "Fecha Orden de Compra" o "Fecha Factura")
+    const fechaMatch = fullText.match(/Fecha\s+(?:Orden\s+de\s+Compra|Factura|Guía|Guia)[\s:]*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
+    const fechaGuia = fechaMatch ? fechaMatch[1] : "No detectada";
 
-    // --- PROCESAMIENTO DE LA GUÍA (Igual que el anterior pero optimizado) ---
+    // 2. Extraer Número de Factura/Folio
+    const idGuiaMatch = fullText.match(/(?:FACTURA|FOLIO|NRO|GUIA)[\s:\[]*(\d+)/i);
+    const numeroGuia = idGuiaMatch ? idGuiaMatch[1] : "No detectado";
+
+    // --- PROCESAMIENTO DE PRODUCTOS ---
     const lineas = fullText.split('\n');
-    const productosEncontrados = [];
-    let folio = "No detectado";
-    let fecha = "No detectada";
+    const productos = [];
 
     lineas.forEach(linea => {
-      // Captura Folio
-      const folioMatch = linea.match(/(?:FOLIO|GUIA|NRO|N°|NUMERO)[\s:\[]*(\d+)/i);
-      if (folioMatch && folio === "No detectado") folio = folioMatch[1];
+      // Patron específico: SKU -> Descripción -> SKU -> Cantidad
+      // Ejemplo en tu PDF: "80172","Tartina de alachofa...","80172","12"
+      const match = linea.match(/(80\d{3})[\s",]+(.+?)[\s",]+(80\d{3})[\s",]+(\d+)/);
+      
+      if (match) {
+        const sku = match[1];
+        const nombre = match[2].replace(/[",\r\n\\]/g, '').trim();
+        const cantidad = parseInt(match[4]);
 
-      // Captura Fecha
-      const fechaMatch = linea.match(/(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/);
-      if (fechaMatch && fecha === "No detectada") fecha = fechaMatch[1];
-
-      // Captura de SKU (Formato 80XXX)
-      const skuMatch = linea.match(/\b(80\d{3})\b/);
-      if (skuMatch) {
-        const sku = skuMatch[1];
-        const numerosEnLinea = linea.match(/\d+/g) || [];
-        const candidatosCantidad = numerosEnLinea.filter(n => n !== sku);
-        
-        // Asumimos que la cantidad es el último número de la línea (típico en tablas)
-        let cantidad = 1;
-        if (candidatosCantidad.length > 0) {
-          cantidad = parseInt(candidatosCantidad[candidatosCantidad.length - 1]);
-        }
-
-        if (!productosEncontrados.some(p => p.codigo === sku)) {
-          productosEncontrados.push({
-            codigo: sku,
-            cantidad: cantidad
+        if (!productos.some(p => p.sku === sku)) {
+          productos.push({
+            sku: sku,
+            nombre: nombre,
+            unidades: cantidad
           });
         }
       }
@@ -108,19 +82,14 @@ exports.handler = async (event) => {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         success: true,
-        folio,
-        fecha,
-        productos: productosEncontrados,
-        debug: { tipoArchivo: isPDF ? 'PDF' : 'Imagen' }
+        numeroGuia,
+        fecha: fechaGuia,
+        productos,
+        count: productos.length
       })
     };
 
   } catch (error) {
-    console.error('Error detallado:', error);
-    return {
-      statusCode: 500,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ success: false, error: error.message })
-    };
+    return { statusCode: 500, body: JSON.stringify({ success: false, error: error.message }) };
   }
 };
