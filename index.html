@@ -1946,10 +1946,20 @@ if (currentBrand !== 'Todas' && !searchTerm) {
         }
         
         function abrirModalFirmaRecepcion() {
-            const numeroGuia = currentDocNumber || prompt('Ingrese número de guía de despacho:');
-            if (numeroGuia) {
-                abrirModalFirma(`Recepción Guía #${numeroGuia}`);
+            // Verificar que hay productos contados
+            const productosContados = Object.keys(dataReception).filter(sku => dataReception[sku] > 0);
+            
+            if (productosContados.length === 0) {
+                showToast('⚠️ No hay productos contados para finalizar');
+                return;
             }
+            
+            // Si no hay número de guía, usar fecha/hora
+            if (!currentDocNumber) {
+                currentDocNumber = new Date().toISOString().slice(0,10).replace(/-/g,'');
+            }
+            
+            abrirModalFirma(`Recepción #${currentDocNumber}`);
         }
         
         function abrirModalFirma(tipo) {
@@ -3671,69 +3681,61 @@ function ejecutarSumaInventario(data) {
         }
         
         function mostrarConfirmacionProductos(numeroFactura, fecha, productos) {
-            // Guardar datos en variable global para evitar problemas con JSON en onclick
+            // Guardar datos en variable global
             window.tempProductosCargar = {
                 numeroFactura: numeroFactura,
                 productos: productos
             };
             
-            // Modal para confirmar productos uno por uno
             const modal = document.getElementById('shareModal');
             const modalContent = modal.querySelector('.modal-content');
             
+            const totalUnidades = productos.reduce((sum, p) => sum + p.cantidad, 0);
+            
             let html = `
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-weight: 600; color: #1e293b; font-size: 16px;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
+                    <div style="font-weight: 700; color: #1e293b; font-size: 18px;">
                         Factura #${numeroFactura}
                     </div>
                     <div style="font-size: 13px; color: #64748b; margin-top: 5px;">
-                        Fecha: ${fecha} | ${productos.length} productos
+                        ${fecha ? `Fecha: ${fecha} | ` : ''}${productos.length} productos | ${totalUnidades} unidades
                     </div>
                 </div>
                 
-                <div style="max-height: 300px; overflow-y: auto; margin-bottom: 20px;">
-            `;
-            
-            productos.forEach((p, idx) => {
-                html += `
-                    <div style="background: #f8fafc; border-radius: 8px; padding: 12px; margin-bottom: 10px;">
-                        <div style="font-weight: 600; color: #1e293b; font-size: 13px;">
-                            ${p.sku} - ${p.descripcion}
-                        </div>
-                        <div style="color: #059669; font-weight: 600; font-size: 14px; margin-top: 4px;">
-                            ${p.cantidad} unidades
-                        </div>
+                <div style="background: #f0fdf4; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
+                    <div style="font-size: 14px; color: #166534; font-weight: 600;">
+                        ¿Iniciar verificación de recepción?
                     </div>
-                `;
-            });
-            
-            html += `
+                    <div style="font-size: 12px; color: #15803d; margin-top: 5px;">
+                        Confirmarás la cantidad recibida de cada producto
+                    </div>
                 </div>
                 
-                <div style="display: flex; gap: 10px;">
-                    <button onclick="cargarProductosGuia()" class="btn-cta" style="flex: 1;">
-                        ✅ Cargar todos
+                <div style="display: flex; gap: 10px; flex-direction: column;">
+                    <button onclick="iniciarVerificacionGuia()" class="btn-cta" style="width: 100%;">
+                        ✅ Iniciar Verificación
                     </button>
-                    <button onclick="closeShareModal()" style="flex: 1; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
+                    <button onclick="closeShareModal()" style="width: 100%; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
                         ✕ Cancelar
                     </button>
                 </div>
             `;
             
-            modal.querySelector('.modal-title').textContent = 'Confirmar Factura';
+            modal.querySelector('.modal-title').textContent = 'Guía Detectada';
             modalContent.innerHTML = html;
             modal.classList.add('active');
         }
         
-        function cargarProductosGuia() {
+        function iniciarVerificacionGuia() {
             if (!window.tempProductosCargar) {
-                showToast('❌ Error: No hay datos para cargar');
+                showToast('❌ Error: No hay datos');
                 return;
             }
             
             const { numeroFactura, productos } = window.tempProductosCargar;
             
-            // Verificar si ya existe una recepción con este número
+            // Verificar si ya existe
             const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
             const existente = historial.find(h => h.numeroGuia === numeroFactura && h.tipo && h.tipo.includes('Recepción'));
             
@@ -3745,7 +3747,7 @@ function ejecutarSumaInventario(data) {
                 return;
             }
             
-            // Proceder a cargar
+            // Iniciar verificación directamente
             ejecutarCargaProductos(numeroFactura, productos);
         }
         
