@@ -11,10 +11,16 @@ const getVisionClient = () => {
 };
 
 exports.handler = async (event) => {
+  // Manejo de CORS para evitar bloqueos
+  if (event.httpMethod === 'OPTIONS') {
+    return { statusCode: 200, headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "Content-Type" }, body: '' };
+  }
+
   try {
     const body = JSON.parse(event.body);
     const { image } = body;
-    if (!image) throw new Error("No se recibió archivo");
+
+    if (!image) throw new Error("No se recibió la imagen o PDF");
 
     const client = getVisionClient();
     const base64Data = image.split(',')[1] || image;
@@ -23,34 +29,29 @@ exports.handler = async (event) => {
     let fullText = "";
 
     if (isPDF) {
-      // PROCESAMIENTO DE PDF
       const request = {
         requests: [{
           inputConfig: { mimeType: 'application/pdf', content: base64Data },
           features: [{ type: 'DOCUMENT_TEXT_DETECTION' }],
-          pages: [1] 
+          pages: [1]
         }]
       };
       const [result] = await client.batchAnnotateFiles(request);
-      // Estructura de respuesta de Google Vision para archivos
       const responses = result.responses[0].responses || [];
       fullText = responses.map(r => r.fullTextAnnotation ? r.fullTextAnnotation.text : "").join("\n");
     } else {
-      // PROCESAMIENTO DE IMAGEN
       const [result] = await client.documentTextDetection({ image: { content: base64Data } });
       fullText = result.fullTextAnnotation ? result.fullTextAnnotation.text : '';
     }
 
-    if (!fullText) throw new Error("No se detectó texto");
+    if (!fullText) throw new Error("El OCR no devolvió texto");
 
-    // --- EXTRACCIÓN ROBUSTA ---
+    // Extracción de datos
     const facturaMatch = fullText.match(/(?:FACTURA|FOLIO|NRO)[\s:\[]*(\d+)/i);
     const fechaMatch = fullText.match(/Fecha[\s\w]*[:]*\s*(\d{1,2}[\/-]\d{1,2}[\/-]\d{2,4})/i);
-
-    // Limpiamos texto para la regex de productos
+    
     const textoLimpio = fullText.replace(/[\r\n]+/g, ' ').replace(/"/g, '');
     const productos = [];
-    // Esta regex busca: SKU -> Nombre -> SKU Repetido -> Cantidad
     const regexKC = /(80\d{3})\s+(.+?)\s+\1\s+(\d+)/g;
 
     let match;
@@ -64,7 +65,7 @@ exports.handler = async (event) => {
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       body: JSON.stringify({
         success: true,
         numeroGuia: facturaMatch ? facturaMatch[1] : "S/N",
@@ -74,9 +75,9 @@ exports.handler = async (event) => {
     };
 
   } catch (err) {
-    console.error("ERROR OCR:", err.message);
     return {
       statusCode: 500,
+      headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" },
       body: JSON.stringify({ success: false, error: err.message })
     };
   }
