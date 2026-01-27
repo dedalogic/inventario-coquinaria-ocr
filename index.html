@@ -385,7 +385,9 @@
     <input type="file" id="importExcelInput" accept=".xlsx,.xls" style="display:none" onchange="importarExcelRecepcion(this.files[0])">
     <input type="file" id="importInventoryExcel" accept=".xlsx,.xls" style="display:none" onchange="importarExcelInventario(this.files[0])">
     <input type="file" id="importReceptionExcel" accept=".xlsx,.xls" style="display:none" onchange="importarExcelRecepcion(this.files[0])">
-    <input type="file" id="importGuidaPDF" accept=".pdf" style="display:none" onchange="importarGuidaPDF(this.files[0])">
+    <input type="file" id="importGuidaPDF" accept=".pdf,image/*" style="display:none" onchange="importarGuidaPDF(this.files[0])">
+    <input type="file" id="importCatalogo" accept=".xlsx,.xls,.json" style="display:none" onchange="importarCatalogo(this.files[0])">
+    <input type="file" id="importGuiaExcel" accept=".xlsx,.xls" style="display:none" onchange="importarGuiaDesdeExcel(this.files[0])">
     
     <!-- HEADER -->
     <div class="header">
@@ -634,7 +636,7 @@ const rawProducts = [
     {sku:"80127", brand:"Coquinaria", name:"Set 6 Vasos Talladas 420 ml Coquinaria", description:"#REF!", origin:"China"},
     {sku:"80129", brand:"Coquinaria", name:"Bolsa Coquinaria M", description:")La Bolsa Coquinaria talla M redefine el arte de presentar. Confeccionada con cartulina de 235 g y una impresión full color con acabado termolaminado opaco, es un adelanto de la magia que encontrarás en su interior. Su mango de cordón tripolino y la delicada cinta de cierre, añaden sofisticación, mientras el refuerzo de 270 g garantiza estilo y resistencia en perfecta armonía", origin:"Chile"},
     {sku:"80130", brand:"Coquinaria", name:"Bolsa Coquinaria L", description:"La Bolsa Coquinaria talla L es una combinación de estilo y funcionalidad. Confeccionada con cartulina de 235 g y una impresión full color, te cautivará con un acabado termolaminado opaco que evoca sofisticación. Su mango de cordón tripolino garantiza elegancia y comodidad, mientras la cinta de cierre y el refuerzo de 270 g aseguran un diseño distinguido y resistente.", origin:"Chile"},
-    {sku:"80131", brand:"Kitchen Center", name:"Paño de Cocina Kitchen Center", description:"Dale un toque de color y funcionalidad a tu cocina con nuestro paño de cocina premium, diseñado para eliminar marcas de agua y dejar tus copas, vasos y cubiertos impecables. Fabricado con una innovadora mezcla de 70% bambú y 30% algodón, ofrece un secado rápido, sin pelusas ni manchas, mientras cuida cada superficie con suavidad. Disponible en rojo, gris, verde y azul, combina estilo, sustentabilidad y alto rendimiento en un solo producto. Elegancia y practicidad para tu día a día. ¡Descúbrelo y renueva tu cocina!", origin:"China"},
+    {sku:"80131", brand:"Coquinaria", name:"Paño de Cocina Coquinaria", description:"Dale un toque de color y funcionalidad a tu cocina con nuestro paño de cocina premium, diseñado para eliminar marcas de agua y dejar tus copas, vasos y cubiertos impecables. Fabricado con una innovadora mezcla de 70% bambú y 30% algodón, ofrece un secado rápido, sin pelusas ni manchas, mientras cuida cada superficie con suavidad. Disponible en rojo, gris, verde y azul, combina estilo, sustentabilidad y alto rendimiento en un solo producto. Elegancia y practicidad para tu día a día. ¡Descúbrelo y renueva tu cocina!", origin:"China"},
     {sku:"80132", brand:"Cristales de Chile", name:"Salmuera Ajo Tomillo Cristales de Chile", description:"#REF!", origin:"Chile"},
     {sku:"80133", brand:"Coquinaria", name:"Set 2 Mugs de vidrio 250ml Coquinaria", description:"#REF!", origin:"China"},
     {sku:"80134", brand:"Coquinaria", name:"Tetera vidrio 650ml Coquinaria", description:"#REF!", origin:"China"},
@@ -908,7 +910,37 @@ const rawProducts = [
     {sku:"80455", brand:"Coquinaria", name:"Set 4 Paños de Cocina Verduras amarillo Coquinaria", description:"", origin:"CHINA"},
     {sku:"80456", brand:"Coquinaria", name:"Set 4 Paños de Cocina Verduras verde Coquinaria", description:"", origin:"CHINA"},
     {sku:"80457", brand:"Coquinaria", name:"Molinillo Mix 4 pimientas Coquinaria", description:"", origin:"CLP"},
-    {sku:"80458", brand:"Coquinaria", name:"Molinillo Sal Himalaya Coquinaria", description:"", origin:"CLP"}
+    {sku:"80458", brand:"Coquinaria", name:"Molinillo Sal Himalaya Coquinaria", description:"", origin:"CLP"},
+    {sku:"80415", brand:"Pommery", name:"Mostaza Antigua 100 grs Pommery", description:"", origin:"Francia"},
+    {sku:"80416", brand:"Pommery", name:"Mostaza Dijon 100 grs Pommery", description:"", origin:"Francia"},
+    {sku:"80417", brand:"Pommery", name:"Mostaza Ajo y Chalota 100grs Pommery", description:"", origin:"Francia"},
+    {sku:"80418", brand:"Pommery", name:"Mostaza Estragon 100grs Pommery", description:"", origin:"Francia"},
+    {sku:"80431", brand:"La Chinata", name:"Aceite de oliva extra virgen aromatizado c/ajos 250ml La Chinata", description:"", origin:"España"},
+    {sku:"80432", brand:"La Chinata", name:"Aceite oliva extra virgen aromatizado c/pimienta 250ml La Chinata", description:"", origin:"España"},
+    {sku:"80433", brand:"La Chinata", name:"Aceite oliva extra virgen aromatizado c/romero 250ml La Chinata", description:"", origin:"España"},
+    {sku:"80434", brand:"La Chinata", name:"Aceite de oliva extra virgen aromatizado con ají 250ml La Chinata", description:"", origin:"España"},
+    {sku:"80435", brand:"La Chinata", name:"Aceitunas Manzanilla ajo y romero 200 grs La Chinata", description:"", origin:"España"},
+    {sku:"80436", brand:"La Chinata", name:"Paté secreto ibérico 120 grs La Chinata", description:"", origin:"España"},
+    {sku:"80437", brand:"La Chinata", name:"Paté de faisán con trufas 120 grs La Chinata", description:"", origin:"España"},
+    {sku:"80438", brand:"La Chinata", name:"Paté ibérico al pimentón 120 grs La Chinata", description:"", origin:"España"},
+    {sku:"80464", brand:"Mousse del Pacífico", name:"Mousse del Pacífico Pulpo 60 Grs", description:"", origin:"Chile"},
+    {sku:"80465", brand:"Mousse del Pacífico", name:"Mousse del Pacífico Salmon Ahumado 60 grs", description:"", origin:"Chile"},
+    {sku:"80466", brand:"Mousse del Pacífico", name:"Mousse del Pacífico Locos 60 grs", description:"", origin:"Chile"},
+    {sku:"80467", brand:"Mousse del Pacífico", name:"Mousse del Pacífico Centolla Patagónica 60 grs", description:"", origin:"Chile"},
+    {sku:"80460", brand:"Edouard Artzner", name:"Foie Gras ganso 180 grs Edouard Artzner", description:"", origin:"Francia"},
+    {sku:"80461", brand:"Edouard Artzner", name:"Foie Gras Pato 180 grs Edouard Artzner", description:"", origin:"Francia"},
+    {sku:"80462", brand:"Edouard Artzner", name:"Terrina Pato con naranja 100grs Edouard Artzner", description:"", origin:"Francia"},
+    {sku:"80463", brand:"Edouard Artzner", name:"Terrina Cerdo con miel y especies 100grs Edouard Artzner", description:"", origin:"Francia"},
+    {sku:"80474", brand:"Gran Cucina", name:"Eliche 5 Sabores 500 grs Gran Cucina", description:"", origin:"Italia"},
+    {sku:"80475", brand:"Gran Cucina", name:"Rigatoni Arlecchino Multicolor 500 grs Gran Cucina", description:"", origin:"Italia"},
+    {sku:"80476", brand:"Gran Cucina", name:"Tagliatelle al huevo tricolor 250 grs Gran Cucina", description:"", origin:"Italia"},
+    {sku:"80477", brand:"Gran Cucina", name:"Tagliatelle Limony tinta calamar 250 grs Gran Cucina", description:"", origin:"Italia"},
+    {sku:"80478", brand:"Gran Cucina", name:"Salsa de Tomates con setas Porcini 180 grs Gran Cucina", description:"", origin:"Italia"},
+    {sku:"80484", brand:"Gran Cucina", name:"Pesto de Limón 130grs Gran Cucina", description:"", origin:"Italia"},
+    {sku:"80485", brand:"Gran Cucina", name:"Mantequilla de trufa 70 grs Gran Cucina", description:"", origin:"Italia"},
+    {sku:"80479", brand:"Tiberino", name:"Risotto Pesto albahaca 200 grs Tiberino", description:"", origin:"Italia"},
+    {sku:"80480", brand:"Tiberino", name:"Risotto Porcini 200 grs Tiberino", description:"", origin:"Italia"},
+    {sku:"80481", brand:"Tiberino", name:"Risotto Porcini y trufa blanca 200 grs Tiberino", description:"", origin:"Italia"}
 ];
 
         const CATEGORIES = ["Aperitivo", "Aderezos y Condimentos", "Bar y Mixología", "Gourmet", "Mesa y Cocina", "Momentos Dulces", "Regalos", "Té y Café", "Otros"];
@@ -931,7 +963,8 @@ let filterExpanded = null; // 'category' | 'brand' | null
         let dataSuggestion = {};
         let currentDocNumber = "";
         
-        let swipeStartX = 0;
+        var swipeStartX = 0;
+        var swipeCurrentX = 0;
         let activeDetailSku = null;
         let shareTypeTemp = '';
 
@@ -1050,26 +1083,42 @@ let filterExpanded = null; // 'category' | 'brand' | null
     } else if (view === 'reception') {
         headerActions.innerHTML = `
             <div class="header-control">
-                <input type="text" id="guideNumber" placeholder="N° Guía" style="background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 8px; border-radius: 6px; font-size: 12px; width: 70px; text-align: center;" onchange="saveData()">
+                <input type="text" id="guideNumber" placeholder="N°" style="background: rgba(255,255,255,0.15); border: none; color: white; padding: 6px 8px; border-radius: 6px; font-size: 12px; width: 55px; text-align: center;" onchange="saveData()">
             </div>
             <button class="header-icon-btn" onclick="confirmarReiniciar()" title="Reiniciar">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
             </button>
-            <button class="header-icon-btn" onclick="document.getElementById('importGuidaPDF').click()" title="Cargar Guía PDF">
+            <button class="header-icon-btn" onclick="document.getElementById('importGuidaPDF').click()" title="Cargar Guía (PDF/Imagen)">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
             </button>
-            <button class="header-icon-btn" onclick="document.getElementById('importReceptionExcel').click()" title="Importar Excel">
+            <button class="header-icon-btn" onclick="document.getElementById('importGuiaExcel').click()" title="Cargar Guía Excel">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </button>
+        `;
+    } else if (view === 'catalog') {
+        headerActions.innerHTML = `
+            <button class="header-icon-btn" onclick="mostrarModalAgregarProducto()" title="Agregar Producto">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                </svg>
+            </button>
+            <button class="header-icon-btn" onclick="exportarCatalogo()" title="Exportar Catálogo">
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M4 16v2a2 2 0 002 2h12a2 2 0 002-2v-2M7 10l5 5m0 0l5-5m-5 5V4" />
+                </svg>
+            </button>
+            <button class="header-icon-btn" onclick="document.getElementById('importCatalogo').click()" title="Importar Catálogo">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4" />
                 </svg>
             </button>
         `;
-    } else if (view === 'catalog') {
-        headerActions.innerHTML = '';
     } else if (view === 'history') {
         headerActions.innerHTML = '';
     }
@@ -1854,7 +1903,7 @@ if (currentBrand !== 'Todas' && !searchTerm) {
                 }
 
                 return `
-                    <div class="product-card ${borderClass}" onclick="openDetail('${p.sku}')">
+                    <div class="product-card ${borderClass}" onclick="${mainView === 'catalog' ? `openDetail('${p.sku}')` : ''}">
                         <div class="product-info">
                             <h4>${p.name}</h4>
                             <div class="product-sku">SKU: ${p.sku}</div>
@@ -2564,20 +2613,66 @@ if (currentBrand !== 'Todas' && !searchTerm) {
             }
             
             container.innerHTML = filtrado.map(item => `
-                <div style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between;">
+                <div class="history-item" data-id="${item.id}" 
+                     style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden;"
+                     ontouchstart="iniciarSwipeHistorial(event, '${item.id}')"
+                     ontouchmove="moverSwipeHistorial(event, '${item.id}')"
+                     ontouchend="finalizarSwipeHistorial(event, '${item.id}')"
+                     oncontextmenu="mostrarMenuBorrar(event, '${item.id}')">
                     <div style="flex: 1;">
                         <div style="font-weight: 600; color: #1e293b; font-size: 14px;">
-                            ${item.tipo.includes('Recepción') ? `Guía de Despacho ${item.numeroGuia}` : 'Inventario'}
+                            ${item.tipo.includes('Recepción') ? `Factura #${item.numeroGuia}` : 'Inventario'}
                         </div>
                         <div style="font-size: 12px; color: #64748b; margin-top: 4px;">${item.fecha} • ${item.nombre}</div>
+                        ${item.totalEsperado ? `<div style="font-size: 11px; color: #059669; margin-top: 2px;">✓ ${item.productosOK || 0} OK | ⚠ ${item.productosDiff || 0} dif.</div>` : ''}
                     </div>
-                    <div style="display: flex; gap: 8px;">
-                        <button onclick="cargarDelHistorial('${item.id}')" style="background: #059669; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;">📂 Abrir</button>
-                        <button onclick="generarPDFDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;">PDF</button>
-                        <button onclick="generarExcelDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 12px; border-radius: 6px; font-size: 12px; cursor: pointer; font-weight: 600;">Excel</button>
+                    <div style="display: flex; gap: 6px; align-items: center;">
+                        <button onclick="event.stopPropagation(); cargarDelHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">📂</button>
+                        <button onclick="event.stopPropagation(); generarPDFDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">PDF</button>
+                        <button onclick="event.stopPropagation(); generarExcelDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">XLS</button>
+                        <button onclick="event.stopPropagation(); confirmarBorrarHistorial('${item.id}')" style="background: #991b1b; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">🗑️</button>
                     </div>
                 </div>
             `).join('');
+        }
+        
+        function confirmarBorrarHistorial(id) {
+            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            const item = historial.find(h => h.id === id);
+            
+            if (!item) return;
+            
+            const nombre = item.tipo.includes('Recepción') ? `Factura #${item.numeroGuia}` : `Inventario del ${item.fecha}`;
+            
+            if (confirm(`¿Eliminar "${nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+                const nuevoHistorial = historial.filter(h => h.id !== id);
+                localStorage.setItem('historial_conteos', JSON.stringify(nuevoHistorial));
+                renderHistory();
+                showToast('✅ Registro eliminado');
+            }
+        }
+        
+        // Reusar variables de swipe existentes
+        
+        function iniciarSwipeHistorial(e, id) {
+            swipeStartX = e.touches[0].clientX;
+        }
+        
+        function moverSwipeHistorial(e, id) {
+            swipeCurrentX = e.touches[0].clientX;
+        }
+        
+        function finalizarSwipeHistorial(e, id) {
+            const diff = swipeStartX - swipeCurrentX;
+            if (diff > 100) {
+                // Swipe izquierda - mostrar opción borrar
+                confirmarBorrarHistorial(id);
+            }
+        }
+        
+        function mostrarMenuBorrar(e, id) {
+            e.preventDefault();
+            confirmarBorrarHistorial(id);
         }
         
         function cargarDelHistorial(id) {
@@ -3712,37 +3807,373 @@ function ejecutarSumaInventario(data) {
         }
         
         function ejecutarCargaProductos(numeroFactura, productos) {
-            // Guardar productos de la guía para filtrar después
-            window.productosGuiaActual = productos.map(p => p.sku);
-            
-            // Cargar cantidades esperadas de la guía
-            dataReception = {};
-            window.cantidadesEsperadas = {};
-            productos.forEach(p => {
-                dataReception[p.sku] = 0; // Empezar en 0, usuario ingresa lo que recibió
-                window.cantidadesEsperadas[p.sku] = p.cantidad; // Guardar lo esperado
-            });
+            // Guardar datos para verificación uno por uno
+            window.verificacionGuia = {
+                numeroFactura: numeroFactura,
+                productos: productos.map(p => ({
+                    sku: p.sku,
+                    descripcion: p.descripcion,
+                    cantidadEsperada: p.cantidad,
+                    cantidadRecibida: null,
+                    verificado: false
+                })),
+                indexActual: 0
+            };
             
             currentDocNumber = numeroFactura;
-            
-            // Cambiar a vista de recepción y filtrar solo productos de la guía
-            mainView = 'reception';
-            currentBrand = 'Todas';
-            window.filtrarSoloGuia = true; // Flag para filtrar
-            
-            saveData();
             closeShareModal();
-            
-            // Actualizar UI
-            document.querySelectorAll('.nav-item').forEach(nav => nav.classList.remove('active'));
-            document.getElementById('nav-reception')?.classList.add('active');
-            
-            renderProductsGuia(); // Función especial para mostrar solo productos de la guía
-            
-            showToast(`📋 Factura #${numeroFactura} - Ingrese cantidades recibidas`);
             
             // Limpiar variable temporal
             window.tempProductosCargar = null;
+            
+            // Iniciar verificación
+            setTimeout(() => {
+                mostrarVerificacionProductoGuia();
+            }, 150);
+        }
+        
+        function mostrarVerificacionProductoGuia() {
+            const data = window.verificacionGuia;
+            if (!data) return;
+            
+            // Si ya terminamos todos los productos
+            if (data.indexActual >= data.productos.length) {
+                finalizarVerificacionGuia();
+                return;
+            }
+            
+            const producto = data.productos[data.indexActual];
+            const productoInfo = rawProducts.find(p => p.sku === producto.sku);
+            const nombreProducto = productoInfo ? productoInfo.name : producto.descripcion;
+            
+            const modal = document.getElementById('shareModal');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            const progreso = ((data.indexActual + 1) / data.productos.length * 100).toFixed(0);
+            
+            let html = `
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 12px; color: #64748b;">Producto ${data.indexActual + 1} de ${data.productos.length}</span>
+                        <span style="font-size: 12px; font-weight: 600; color: #059669;">${progreso}%</span>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                        <div style="width: ${progreso}%; height: 100%; background: linear-gradient(90deg, #059669, #10b981); transition: width 0.3s;"></div>
+                    </div>
+                </div>
+                
+                <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center;">
+                    <div style="font-size: 12px; color: #64748b; margin-bottom: 5px;">SKU ${producto.sku}</div>
+                    <div style="font-size: 16px; font-weight: 600; color: #1e293b; margin-bottom: 15px; line-height: 1.4;">${nombreProducto}</div>
+                    
+                    <div style="background: white; border-radius: 8px; padding: 15px; border: 2px solid #e2e8f0;">
+                        <div style="font-size: 13px; color: #64748b; margin-bottom: 5px;">Cantidad esperada según guía</div>
+                        <div style="font-size: 42px; font-weight: 800; color: #1e293b;">${producto.cantidadEsperada}</div>
+                    </div>
+                </div>
+                
+                <div style="font-size: 15px; font-weight: 600; color: #1e293b; margin-bottom: 15px; text-align: center;">
+                    ¿Recibió ${producto.cantidadEsperada} unidades?
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button onclick="confirmarCantidadGuia(${producto.cantidadEsperada})" 
+                            style="flex: 1; padding: 18px; border: 2px solid #059669; background: #f0fdf4; color: #059669; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer;">
+                        ✓ Sí, correcto
+                    </button>
+                    <button onclick="mostrarInputCantidadDiferente()" 
+                            style="flex: 1; padding: 18px; border: 2px solid #dc2626; background: #fef2f2; color: #dc2626; border-radius: 12px; font-weight: 700; font-size: 16px; cursor: pointer;">
+                        ✗ No, diferente
+                    </button>
+                </div>
+                
+                <button onclick="cancelarVerificacionGuia()" 
+                        style="width: 100%; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                    Cancelar verificación
+                </button>
+            `;
+            
+            modal.querySelector('.modal-title').textContent = `Factura #${data.numeroFactura}`;
+            modalContent.innerHTML = html;
+            modal.classList.add('active');
+        }
+        
+        function mostrarInputCantidadDiferente() {
+            const data = window.verificacionGuia;
+            const producto = data.productos[data.indexActual];
+            
+            const modal = document.getElementById('shareModal');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            let html = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 14px; color: #64748b; margin-bottom: 5px;">SKU ${producto.sku}</div>
+                    <div style="font-size: 16px; font-weight: 600; color: #1e293b;">${producto.descripcion}</div>
+                </div>
+                
+                <div style="background: #fef2f2; border-radius: 12px; padding: 15px; margin-bottom: 20px;">
+                    <div style="font-size: 13px; color: #991b1b; margin-bottom: 10px;">Esperado: <strong>${producto.cantidadEsperada}</strong> unidades</div>
+                    
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b;">¿Cuántas recibió realmente?</label>
+                    <input type="number" id="inputCantidadReal" min="0" value="0" 
+                           style="width: 100%; padding: 15px; border: 2px solid #dc2626; border-radius: 8px; font-size: 24px; font-weight: 700; text-align: center;"
+                           autofocus>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="mostrarVerificacionProductoGuia()" 
+                            style="flex: 1; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        ← Volver
+                    </button>
+                    <button onclick="confirmarCantidadDiferente()" 
+                            style="flex: 1; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        Confirmar cantidad
+                    </button>
+                </div>
+            `;
+            
+            modal.querySelector('.modal-title').textContent = 'Cantidad diferente';
+            modalContent.innerHTML = html;
+            
+            // Focus en el input
+            setTimeout(() => {
+                document.getElementById('inputCantidadReal')?.focus();
+                document.getElementById('inputCantidadReal')?.select();
+            }, 100);
+        }
+        
+        function confirmarCantidadGuia(cantidad) {
+            const data = window.verificacionGuia;
+            data.productos[data.indexActual].cantidadRecibida = cantidad;
+            data.productos[data.indexActual].verificado = true;
+            data.indexActual++;
+            
+            mostrarVerificacionProductoGuia();
+        }
+        
+        function confirmarCantidadDiferente() {
+            const cantidad = parseInt(document.getElementById('inputCantidadReal')?.value) || 0;
+            confirmarCantidadGuia(cantidad);
+        }
+        
+        function cancelarVerificacionGuia() {
+            if (confirm('¿Cancelar la verificación?\n\nSe perderá el progreso actual.')) {
+                window.verificacionGuia = null;
+                closeShareModal();
+                showToast('Verificación cancelada');
+            }
+        }
+        
+        function finalizarVerificacionGuia() {
+            const data = window.verificacionGuia;
+            
+            // Calcular totales
+            let totalEsperado = 0;
+            let totalRecibido = 0;
+            let productosOK = 0;
+            let productosDiff = 0;
+            
+            data.productos.forEach(p => {
+                totalEsperado += p.cantidadEsperada;
+                totalRecibido += p.cantidadRecibida;
+                if (p.cantidadRecibida === p.cantidadEsperada) {
+                    productosOK++;
+                } else {
+                    productosDiff++;
+                }
+            });
+            
+            // Guardar para firma
+            window.recepcionParaFirmar = {
+                numeroFactura: data.numeroFactura,
+                productos: data.productos.map(p => ({
+                    sku: p.sku,
+                    descripcion: p.descripcion,
+                    esperado: p.cantidadEsperada,
+                    recibido: p.cantidadRecibida,
+                    diferencia: p.cantidadRecibida - p.cantidadEsperada
+                })),
+                totalEsperado,
+                totalRecibido,
+                productosOK,
+                productosDiff
+            };
+            
+            // Limpiar verificación
+            window.verificacionGuia = null;
+            
+            // Mostrar resumen y firma
+            mostrarResumenYFirmaGuia();
+        }
+        
+        function mostrarResumenYFirmaGuia() {
+            const data = window.recepcionParaFirmar;
+            if (!data) return;
+            
+            const modal = document.getElementById('shareModal');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            const diferencia = data.totalRecibido - data.totalEsperado;
+            
+            let html = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 48px; margin-bottom: 10px;">${data.productosDiff > 0 ? '⚠️' : '✅'}</div>
+                    <div style="font-weight: 700; color: #1e293b; font-size: 18px;">Verificación Completada</div>
+                    <div style="font-size: 14px; color: #64748b; margin-top: 5px;">Factura #${data.numeroFactura}</div>
+                </div>
+                
+                <div style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center;">
+                        <div style="background: white; padding: 12px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: #64748b;">Esperado</div>
+                            <div style="font-size: 24px; font-weight: 700;">${data.totalEsperado}</div>
+                        </div>
+                        <div style="background: white; padding: 12px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: #64748b;">Recibido</div>
+                            <div style="font-size: 24px; font-weight: 700; color: ${diferencia === 0 ? '#059669' : '#dc2626'};">${data.totalRecibido}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; text-align: center; padding: 10px; background: ${diferencia === 0 ? '#f0fdf4' : '#fef2f2'}; border-radius: 8px;">
+                        <span style="color: ${diferencia === 0 ? '#059669' : '#dc2626'}; font-weight: 600;">
+                            Diferencia: ${diferencia >= 0 ? '+' : ''}${diferencia}
+                        </span>
+                    </div>
+                    <div style="display: flex; justify-content: space-around; margin-top: 10px; font-size: 13px;">
+                        <span style="color: #059669;">✓ Correctos: ${data.productosOK}</span>
+                        <span style="color: #dc2626;">⚠ Diferencias: ${data.productosDiff}</span>
+                    </div>
+                </div>
+                
+                ${data.productosDiff > 0 ? `
+                <div style="background: #fef2f2; border-radius: 8px; padding: 10px; margin-bottom: 15px; max-height: 120px; overflow-y: auto;">
+                    <div style="font-size: 12px; font-weight: 600; color: #991b1b; margin-bottom: 8px;">Productos con diferencia:</div>
+                    ${data.productos.filter(p => p.diferencia !== 0).map(p => `
+                        <div style="font-size: 11px; color: #7f1d1d; padding: 4px 0; border-bottom: 1px solid #fecaca;">
+                            ${p.sku}: esperado ${p.esperado}, recibido ${p.recibido} (${p.diferencia >= 0 ? '+' : ''}${p.diferencia})
+                        </div>
+                    `).join('')}
+                </div>
+                ` : ''}
+                
+                <div style="margin-bottom: 12px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">Nombre del receptor:</label>
+                    <input type="text" id="inputNombreRecepcion" placeholder="Ingrese su nombre" 
+                           style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">Firma:</label>
+                    <canvas id="canvasFirmaRecepcion" width="300" height="120" 
+                            style="width: 100%; height: 120px; border: 1px solid #e2e8f0; border-radius: 8px; background: white; touch-action: none;"></canvas>
+                    <button onclick="limpiarCanvasFirma()" style="margin-top: 6px; padding: 6px 12px; background: #e2e8f0; border: none; border-radius: 6px; font-size: 11px; cursor: pointer;">
+                        🗑️ Limpiar
+                    </button>
+                </div>
+                
+                <button onclick="guardarRecepcionVerificada()" class="btn-cta" style="width: 100%;">
+                    💾 Guardar y Exportar
+                </button>
+            `;
+            
+            modal.querySelector('.modal-title').textContent = 'Firmar Recepción';
+            modalContent.innerHTML = html;
+            
+            // Inicializar canvas
+            setTimeout(() => initCanvasFirma(), 100);
+        }
+        
+        function initCanvasFirma() {
+            const canvas = document.getElementById('canvasFirmaRecepcion');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            let drawing = false;
+            
+            const getPos = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+                const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+                return { x: x * (canvas.width / rect.width), y: y * (canvas.height / rect.height) };
+            };
+            
+            const start = (e) => { e.preventDefault(); drawing = true; const pos = getPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y); };
+            const draw = (e) => { if (!drawing) return; e.preventDefault(); const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke(); };
+            const stop = () => { drawing = false; };
+            
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stop);
+            canvas.addEventListener('mouseleave', stop);
+            canvas.addEventListener('touchstart', start, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
+            canvas.addEventListener('touchend', stop);
+        }
+        
+        function limpiarCanvasFirma() {
+            const canvas = document.getElementById('canvasFirmaRecepcion');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
+        function guardarRecepcionVerificada() {
+            const nombre = document.getElementById('inputNombreRecepcion')?.value || 'Sin nombre';
+            const canvas = document.getElementById('canvasFirmaRecepcion');
+            
+            if (!canvas) {
+                showToast('❌ Error: Canvas no encontrado');
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const hasDrawing = imageData.data.some((channel, i) => i % 4 !== 3 && channel !== 0);
+            
+            if (!hasDrawing) {
+                showToast('⚠️ Por favor dibuje su firma');
+                return;
+            }
+            
+            const firmaDataURL = canvas.toDataURL('image/png');
+            const data = window.recepcionParaFirmar;
+            
+            const hoy = new Date().toISOString().split('T')[0];
+            const conteo = {
+                id: `Recepcion_${data.numeroFactura}_${Date.now()}`,
+                tipo: `Recepción Guía #${data.numeroFactura}`,
+                fecha: hoy,
+                nombre: nombre,
+                firma: firmaDataURL,
+                numeroGuia: data.numeroFactura,
+                datos: {},
+                productosDetalle: data.productos,
+                totalEsperado: data.totalEsperado,
+                totalRecibido: data.totalRecibido,
+                productosOK: data.productosOK,
+                productosDiff: data.productosDiff,
+                timestamp: new Date().getTime()
+            };
+            
+            // Guardar datos
+            data.productos.forEach(p => {
+                conteo.datos[p.sku] = p.recibido;
+            });
+            
+            // Guardar en historial
+            let historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            historial.unshift(conteo);
+            localStorage.setItem('historial_conteos', JSON.stringify(historial));
+            
+            conteoActualGuardado = conteo;
+            window.recepcionParaFirmar = null;
+            
+            showToast('✅ Recepción guardada');
+            closeShareModal();
+            
+            setTimeout(() => {
+                mostrarModalExportarConteo();
+            }, 200);
         }
         
         function renderProductsGuia() {
@@ -4607,6 +5038,302 @@ async function finalizarRecepcionConFirma() {
         renderProducts();
     }, 1000);
 }
+
+// ============================================
+// GESTIÓN DE CATÁLOGO
+// ============================================
+function mostrarModalAgregarProducto() {
+    const modal = document.getElementById('shareModal');
+    const modalContent = modal.querySelector('.modal-content');
+    
+    let html = `
+        <div style="margin-bottom: 20px;">
+            <div style="font-size: 14px; color: #64748b; margin-bottom: 15px;">Complete los datos del nuevo producto:</div>
+            
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">SKU *</label>
+                <input type="text" id="nuevoSku" placeholder="Ej: 80500" 
+                       style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">Nombre del producto *</label>
+                <input type="text" id="nuevoNombre" placeholder="Nombre del producto" 
+                       style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">Marca</label>
+                <input type="text" id="nuevaMarca" placeholder="Marca (opcional)" 
+                       style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+            </div>
+            
+            <div style="margin-bottom: 12px;">
+                <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">Descripción</label>
+                <textarea id="nuevaDescripcion" placeholder="Descripción del producto (opcional)" rows="3"
+                          style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
+            </div>
+        </div>
+        
+        <div style="display: flex; gap: 10px;">
+            <button onclick="closeShareModal()" 
+                    style="flex: 1; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                Cancelar
+            </button>
+            <button onclick="agregarProducto()" 
+                    style="flex: 1; padding: 12px; background: #059669; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                ➕ Agregar
+            </button>
+        </div>
+    `;
+    
+    modal.querySelector('.modal-title').textContent = 'Agregar Producto';
+    modalContent.innerHTML = html;
+    modal.classList.add('active');
+}
+
+function agregarProducto() {
+    const sku = document.getElementById('nuevoSku')?.value.trim();
+    const nombre = document.getElementById('nuevoNombre')?.value.trim();
+    const marca = document.getElementById('nuevaMarca')?.value.trim() || 'Sin marca';
+    const descripcion = document.getElementById('nuevaDescripcion')?.value.trim() || '';
+    
+    if (!sku || !nombre) {
+        showToast('⚠️ SKU y nombre son obligatorios');
+        return;
+    }
+    
+    // Verificar si ya existe
+    if (rawProducts.find(p => p.sku === sku)) {
+        showToast('❌ Ya existe un producto con ese SKU');
+        return;
+    }
+    
+    // Agregar al catálogo
+    const nuevoProducto = {
+        sku: sku,
+        name: nombre,
+        brand: marca,
+        descripcion: descripcion
+    };
+    
+    rawProducts.push(nuevoProducto);
+    
+    // Guardar en localStorage
+    guardarCatalogoLocal();
+    
+    closeShareModal();
+    renderProducts();
+    showToast(`✅ Producto ${sku} agregado`);
+}
+
+function guardarCatalogoLocal() {
+    localStorage.setItem('catalogo_productos', JSON.stringify(rawProducts));
+}
+
+function cargarCatalogoLocal() {
+    const catalogoGuardado = localStorage.getItem('catalogo_productos');
+    if (catalogoGuardado) {
+        try {
+            const productos = JSON.parse(catalogoGuardado);
+            if (Array.isArray(productos) && productos.length > 0) {
+                rawProducts = productos;
+            }
+        } catch (e) {
+            console.error('Error cargando catálogo local:', e);
+        }
+    }
+}
+
+async function exportarCatalogo() {
+    showToast('📊 Generando Excel del catálogo...');
+    
+    try {
+        const XLSX = await cargarLibreriaXLSX();
+        
+        const data = rawProducts.map(p => ({
+            'SKU': p.sku,
+            'Nombre': p.name,
+            'Marca': p.brand || '',
+            'Descripción': p.descripcion || ''
+        }));
+        
+        const ws = XLSX.utils.json_to_sheet(data);
+        const wb = XLSX.utils.book_new();
+        
+        ws['!cols'] = [
+            { wch: 10 },  // SKU
+            { wch: 50 },  // Nombre
+            { wch: 20 },  // Marca
+            { wch: 60 }   // Descripción
+        ];
+        
+        XLSX.utils.book_append_sheet(wb, ws, 'Catálogo');
+        
+        const fileName = `Catalogo_Coquinaria_${new Date().toISOString().split('T')[0]}.xlsx`;
+        XLSX.writeFile(wb, fileName);
+        
+        showToast('✅ Catálogo exportado');
+    } catch (error) {
+        console.error('Error exportando:', error);
+        showToast('❌ Error al exportar');
+    }
+}
+
+async function importarCatalogo(file) {
+    if (!file) return;
+    
+    showToast('📂 Importando catálogo...');
+    
+    try {
+        if (file.name.endsWith('.json')) {
+            // Importar JSON
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const productos = JSON.parse(e.target.result);
+                    if (Array.isArray(productos)) {
+                        rawProducts = productos;
+                        guardarCatalogoLocal();
+                        renderProducts();
+                        showToast(`✅ ${productos.length} productos importados`);
+                    }
+                } catch (err) {
+                    showToast('❌ Error en formato JSON');
+                }
+            };
+            reader.readAsText(file);
+        } else {
+            // Importar Excel
+            const XLSX = await cargarLibreriaXLSX();
+            const reader = new FileReader();
+            
+            reader.onload = (e) => {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, { type: 'array' });
+                    const ws = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(ws);
+                    
+                    const productosImportados = jsonData.map(row => ({
+                        sku: (row['SKU'] || row['sku'] || row['Codigo'] || row['codigo'] || '').toString(),
+                        name: row['Nombre'] || row['nombre'] || row['Producto'] || row['producto'] || '',
+                        brand: row['Marca'] || row['marca'] || '',
+                        descripcion: row['Descripción'] || row['descripcion'] || row['Descripcion'] || ''
+                    })).filter(p => p.sku && p.name);
+                    
+                    if (productosImportados.length > 0) {
+                        // Preguntar si reemplazar o agregar
+                        if (confirm(`Se encontraron ${productosImportados.length} productos.\n\n¿Reemplazar catálogo completo?\n\nSí = Reemplazar todo\nNo = Agregar a existentes`)) {
+                            rawProducts = productosImportados;
+                        } else {
+                            // Agregar solo los nuevos
+                            let agregados = 0;
+                            productosImportados.forEach(p => {
+                                if (!rawProducts.find(existing => existing.sku === p.sku)) {
+                                    rawProducts.push(p);
+                                    agregados++;
+                                }
+                            });
+                            showToast(`✅ ${agregados} productos nuevos agregados`);
+                        }
+                        guardarCatalogoLocal();
+                        renderBrandFilters(document.getElementById('toolbarMenu'));
+                        renderProducts();
+                        showToast(`✅ Catálogo actualizado`);
+                    } else {
+                        showToast('⚠️ No se encontraron productos válidos');
+                    }
+                } catch (err) {
+                    console.error('Error:', err);
+                    showToast('❌ Error al procesar Excel');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+    } catch (error) {
+        console.error('Error importando:', error);
+        showToast('❌ Error al importar');
+    }
+    
+    // Limpiar input
+    document.getElementById('importCatalogo').value = '';
+}
+
+async function importarGuiaDesdeExcel(file) {
+    if (!file) return;
+    
+    showToast('📂 Leyendo guía Excel...');
+    
+    try {
+        const XLSX = await cargarLibreriaXLSX();
+        const reader = new FileReader();
+        
+        reader.onload = (e) => {
+            try {
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, { type: 'array' });
+                const ws = workbook.Sheets[workbook.SheetNames[0]];
+                const jsonData = XLSX.utils.sheet_to_json(ws);
+                
+                // Buscar productos con SKU que empiecen con 80
+                const productos = [];
+                let numeroGuia = '';
+                
+                jsonData.forEach(row => {
+                    // Buscar número de guía/factura
+                    Object.values(row).forEach(val => {
+                        if (typeof val === 'string' && val.match(/\d{7,}/)) {
+                            if (!numeroGuia) numeroGuia = val.match(/\d{7,}/)[0];
+                        }
+                    });
+                    
+                    // Buscar SKU y cantidad
+                    const sku = (row['SKU'] || row['sku'] || row['Codigo'] || row['codigo'] || row['Código'] || '').toString();
+                    const cantidad = parseInt(row['Cantidad'] || row['cantidad'] || row['Cant'] || row['Unidades'] || 0);
+                    const descripcion = row['Descripcion'] || row['descripcion'] || row['Descripción'] || row['Producto'] || row['producto'] || '';
+                    
+                    if (sku.startsWith('80') && cantidad > 0) {
+                        productos.push({
+                            sku: sku,
+                            descripcion: descripcion,
+                            cantidad: cantidad
+                        });
+                    }
+                });
+                
+                if (productos.length > 0) {
+                    window.tempProductosCargar = {
+                        numeroFactura: numeroGuia || 'Excel-' + Date.now(),
+                        productos: productos
+                    };
+                    
+                    mostrarConfirmacionProductos(
+                        numeroGuia || 'Importado',
+                        new Date().toLocaleDateString('es-CL'),
+                        productos
+                    );
+                } else {
+                    showToast('⚠️ No se encontraron productos con SKU válido');
+                }
+            } catch (err) {
+                console.error('Error:', err);
+                showToast('❌ Error al procesar Excel');
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    } catch (error) {
+        console.error('Error:', error);
+        showToast('❌ Error al leer archivo');
+    }
+    
+    document.getElementById('importGuiaExcel').value = '';
+}
+
+// Cargar catálogo local al iniciar
+document.addEventListener('DOMContentLoaded', function() {
+    cargarCatalogoLocal();
+});
     </script>
 </body>
 </html>
