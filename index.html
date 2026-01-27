@@ -1541,27 +1541,44 @@ async function handleScan(input) {
         input.value = '';
     }
 }
-function procesarGuiaCompleta() {
-    // Combinar número de guía + productos
-    const dataCompleta = {
-        numeroGuia: escaneoActual.numeroGuia,
-        productos: escaneoActual.productosDetectados
-    };
-    
-    // Aplicar a dataReception
-    currentDocNumber = dataCompleta.numeroGuia;
+function procesarGuiaCompleta(dataIA) {
+    // 1. Validar que recibimos datos
+    if (!dataIA || !dataIA.success) {
+        alert("No hay datos válidos para procesar.");
+        return;
+    }
+
+    // 2. Actualizar el número de guía/factura en tu sistema
+    currentDocNumber = dataIA.numeroGuia;
     const docInput = document.getElementById('docNumberInput');
-    if (docInput) docInput.value = dataCompleta.numeroGuia;
-    
-    dataCompleta.productos.forEach(prod => {
-        dataReception[prod.codigo] = prod.cantidad;
+    if (docInput) docInput.value = dataIA.numeroGuia;
+
+    console.log(`Procesando Factura: ${dataIA.numeroGuia} del ${dataIA.fecha}`);
+
+    // 3. Recorrer los productos detectados por la IA
+    dataIA.productos.forEach(prodScanner => {
+        // A. SUMAR AL STOCK REAL (En tu lista maestra 'products')
+        const productoMaestro = products.find(p => p.sku === prodScanner.sku);
+        
+        if (productoMaestro) {
+            const stockActual = parseInt(productoMaestro.units) || 0;
+            productoMaestro.units = stockActual + prodScanner.unidades;
+            
+            // B. REGISTRAR EN LA RECEPCIÓN (Para que aparezca en el conteo actual)
+            // Usamos += para que si el producto ya estaba, se sume lo nuevo
+            dataReception[prodScanner.sku] = (dataReception[prodScanner.sku] || 0) + prodScanner.unidades;
+        } else {
+            console.warn(`El SKU ${prodScanner.sku} no existe en el inventario maestro.`);
+        }
     });
-    
-    saveData();
-    renderProducts();
-    
-    // Mostrar resumen
-    mostrarResumenGuia(dataCompleta, dataCompleta.productos.length, []);
+
+    // 4. Guardar cambios y refrescar la pantalla
+    // Uso tus funciones originales: saveData y renderProducts
+    if (typeof saveData === 'function') saveData();
+    if (typeof renderProducts === 'function') renderProducts();
+
+    // 5. Notificar éxito
+    alert(`✅ Factura ${dataIA.numeroGuia} procesada.\nSe sumaron ${dataIA.productos.length} productos al stock actual.`);
 }
         async function compressImage(file) {
             return new Promise((resolve, reject) => {
