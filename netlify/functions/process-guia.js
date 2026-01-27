@@ -31,7 +31,7 @@ exports.handler = async (event) => {
 
     // Llamar a Gemini 2.0 Flash
     const geminiResponse = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${process.env.GEMINI_API_KEY}`,
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${process.env.GEMINI_API_KEY}`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -88,7 +88,9 @@ IMPORTANTE:
     if (!geminiResponse.ok) {
       const errorText = await geminiResponse.text();
       console.error('Error Gemini:', errorText);
-      throw new Error(`Error de Gemini: ${geminiResponse.status}`);
+      console.error('API Key presente:', !!process.env.GEMINI_API_KEY);
+      console.error('API Key primeros 10 chars:', process.env.GEMINI_API_KEY?.substring(0, 10));
+      throw new Error(`Error de Gemini: ${geminiResponse.status} - ${errorText.substring(0, 200)}`);
     }
 
     const geminiData = await geminiResponse.json();
