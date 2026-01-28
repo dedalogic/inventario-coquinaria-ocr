@@ -1,47 +1,39 @@
 {
-  "name": "Inventario Coquinaria Parque Arauco",
-  "short_name": "Inventario FPA",
-  "description": "Sistema de gestión de inventario para Coquinaria FPA",
+  "name": "Inventario Coquinaria",
+  "short_name": "Coquinaria",
+  "description": "Sistema de gestión de inventario para Coquinaria",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "display_override": ["standalone", "fullscreen"],
   "background_color": "#4a0404",
   "theme_color": "#4a0404",
   "orientation": "portrait-primary",
-  "categories": ["business", "productivity"],
   "icons": [
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'%3E%3Crect width='192' height='192' fill='%234a0404'/%3E%3Ctext x='96' y='96' text-anchor='middle' dy='.35em' fill='white' font-size='80' font-weight='bold' font-family='Inter, sans-serif'%3EFPA%3C/text%3E%3C/svg%3E",
+      "src": "/icon-192.png",
       "sizes": "192x192",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' fill='%234a0404'/%3E%3Ctext x='256' y='256' text-anchor='middle' dy='.35em' fill='white' font-size='220' font-weight='bold' font-family='Inter, sans-serif'%3EFPA%3C/text%3E%3C/svg%3E",
+      "src": "/icon-512.png",
       "sizes": "512x512",
-      "type": "image/svg+xml",
+      "type": "image/png",
       "purpose": "any maskable"
     }
   ],
   "shortcuts": [
     {
-      "name": "Iniciar Conteo Hoy",
+      "name": "Iniciar Conteo",
       "short_name": "Conteo",
-      "description": "Cargar stock del día anterior y empezar",
-      "url": "/?view=count"
+      "url": "/?view=inventory",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Recepcionar Stock",
       "short_name": "Recepción",
-      "description": "Registrar mercadería recibida",
-      "url": "/?view=reception"
-    },
-    {
-      "name": "Ver Historial",
-      "short_name": "Historial",
-      "description": "Consultar registros anteriores",
-      "url": "/?view=history"
+      "url": "/?view=reception",
+      "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
