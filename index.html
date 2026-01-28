@@ -1073,9 +1073,9 @@ let filterExpanded = null; // 'category' | 'brand' | null
                     <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                 </svg>
             </button>
-            <button class="header-icon-btn" onclick="document.getElementById('importInventoryExcel').click()" title="Importar">
+            <button class="header-icon-btn" onclick="document.getElementById('importInventoryExcel').click()" title="Importar Excel">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M7 16V4m0 0L3 8m4-4l4 4" />
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
             </button>
         `;
@@ -1540,11 +1540,11 @@ async function handleScan(input) {
         return;
     }
     
-    showToast("📸 Procesando guía Kitchen Center...");
+    showToast("📸 Procesando guía...");
     
     try {
         const compressedImage = await compressImage(file);
-        showToast("🚀 Enviando a Google Vision AI...");
+        showToast("🤖 Extrayendo información con AI...");
         
         const response = await fetch('/.netlify/functions/process-guia', {
             method: 'POST',
@@ -2624,23 +2624,23 @@ if (currentBrand !== 'Todas' && !searchTerm) {
             
             container.innerHTML = filtrado.map(item => `
                 <div class="history-item" data-id="${item.id}" 
-                     style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden;"
-                     ontouchstart="iniciarSwipeHistorial(event, '${item.id}')"
-                     ontouchmove="moverSwipeHistorial(event, '${item.id}')"
-                     ontouchend="finalizarSwipeHistorial(event, '${item.id}')"
-                     oncontextmenu="mostrarMenuBorrar(event, '${item.id}')">
-                    <div style="flex: 1;">
+                     style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden;">
+                    <div style="flex: 1;" 
+                         ontouchstart="iniciarSwipeHistorial(event, '${item.id}')"
+                         ontouchmove="moverSwipeHistorial(event, '${item.id}')"
+                         ontouchend="finalizarSwipeHistorial(event, '${item.id}')"
+                         oncontextmenu="mostrarMenuBorrar(event, '${item.id}')">
                         <div style="font-weight: 600; color: #1e293b; font-size: 14px;">
-                            ${item.tipo.includes('Recepción') ? `Factura #${item.numeroGuia}` : 'Inventario'}
+                            ${item.tipo.includes('Recepción') ? `Guía #${item.numeroGuia}` : 'Inventario'}
                         </div>
                         <div style="font-size: 12px; color: #64748b; margin-top: 4px;">${item.fecha} • ${item.nombre}</div>
                         ${item.totalEsperado ? `<div style="font-size: 11px; color: #059669; margin-top: 2px;">✓ ${item.productosOK || 0} OK | ⚠ ${item.productosDiff || 0} dif.</div>` : ''}
                     </div>
                     <div style="display: flex; gap: 6px; align-items: center;">
-                        <button onclick="event.stopPropagation(); cargarDelHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">📂</button>
-                        <button onclick="event.stopPropagation(); generarPDFDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">PDF</button>
-                        <button onclick="event.stopPropagation(); generarExcelDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">XLS</button>
-                        <button onclick="event.stopPropagation(); confirmarBorrarHistorial('${item.id}')" style="background: #991b1b; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">🗑️</button>
+                        <button onclick="cargarDelHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">📂</button>
+                        <button onclick="generarPDFDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">PDF</button>
+                        <button onclick="generarExcelDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">XLS</button>
+                        <button onclick="confirmarBorrarHistorial('${item.id}')" style="background: #991b1b; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">🗑️</button>
                     </div>
                 </div>
             `).join('');
@@ -2652,7 +2652,7 @@ if (currentBrand !== 'Todas' && !searchTerm) {
             
             if (!item) return;
             
-            const nombre = item.tipo.includes('Recepción') ? `Factura #${item.numeroGuia}` : `Inventario del ${item.fecha}`;
+            const nombre = item.tipo.includes('Recepción') ? `Guía #${item.numeroGuia}` : `Inventario del ${item.fecha}`;
             
             if (confirm(`¿Eliminar "${nombre}"?\n\nEsta acción no se puede deshacer.`)) {
                 const nuevoHistorial = historial.filter(h => h.id !== id);
@@ -3472,7 +3472,7 @@ function ejecutarSumaInventario(data) {
         async function importarGuidaPDF(file) {
             if (!file) return;
             
-            showToast('📄 Procesando guía PDF con OCR...');
+            showToast('🤖 Extrayendo información con AI...');
             
             try {
                 const reader = new FileReader();
@@ -3497,8 +3497,8 @@ function ejecutarSumaInventario(data) {
                         const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
                         console.log('📸 Imagen generada, tamaño:', (imageBase64.length / 1024).toFixed(2), 'KB');
                         
-                        // Enviar a Google Vision
-                        showToast('🚀 Enviando a Google Vision AI...');
+                        // Enviar a AI
+                        showToast('🤖 Extrayendo información con AI...');
                         const response = await fetch('/.netlify/functions/process-guia', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -3684,7 +3684,13 @@ function ejecutarSumaInventario(data) {
             // Guardar datos en variable global
             window.tempProductosCargar = {
                 numeroFactura: numeroFactura,
-                productos: productos
+                productos: productos.map(p => ({
+                    sku: p.sku,
+                    descripcion: p.descripcion,
+                    cantidad: p.cantidad,
+                    cantidadRecibida: p.cantidad, // Por defecto igual a lo esperado
+                    verificado: false
+                }))
             };
             
             const modal = document.getElementById('shareModal');
@@ -3696,7 +3702,7 @@ function ejecutarSumaInventario(data) {
                 <div style="text-align: center; margin-bottom: 20px;">
                     <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
                     <div style="font-weight: 700; color: #1e293b; font-size: 18px;">
-                        Factura #${numeroFactura}
+                        Guía #${numeroFactura}
                     </div>
                     <div style="font-size: 13px; color: #64748b; margin-top: 5px;">
                         ${fecha ? `Fecha: ${fecha} | ` : ''}${productos.length} productos | ${totalUnidades} unidades
@@ -3713,7 +3719,7 @@ function ejecutarSumaInventario(data) {
                 </div>
                 
                 <div style="display: flex; gap: 10px; flex-direction: column;">
-                    <button onclick="iniciarVerificacionGuia()" class="btn-cta" style="width: 100%;">
+                    <button onclick="iniciarVerificacionEnModal()" class="btn-cta" style="width: 100%;">
                         ✅ Iniciar Verificación
                     </button>
                     <button onclick="closeShareModal()" style="width: 100%; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
@@ -3727,28 +3733,449 @@ function ejecutarSumaInventario(data) {
             modal.classList.add('active');
         }
         
-        function iniciarVerificacionGuia() {
+        function iniciarVerificacionEnModal() {
             if (!window.tempProductosCargar) {
                 showToast('❌ Error: No hay datos');
                 return;
             }
             
-            const { numeroFactura, productos } = window.tempProductosCargar;
+            window.verificacionIndex = 0;
+            mostrarProductoVerificacion();
+        }
+        
+        function mostrarProductoVerificacion() {
+            const data = window.tempProductosCargar;
+            if (!data) return;
             
-            // Verificar si ya existe
-            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
-            const existente = historial.find(h => h.numeroGuia === numeroFactura && h.tipo && h.tipo.includes('Recepción'));
+            const index = window.verificacionIndex || 0;
             
-            if (existente) {
-                closeShareModal();
-                setTimeout(() => {
-                    mostrarModalReemplazar(numeroFactura, productos, existente);
-                }, 100);
+            // Si terminamos todos, mostrar resumen
+            if (index >= data.productos.length) {
+                mostrarResumenVerificacion();
                 return;
             }
             
-            // Iniciar verificación directamente
-            ejecutarCargaProductos(numeroFactura, productos);
+            const producto = data.productos[index];
+            const productoInfo = rawProducts.find(p => p.sku === producto.sku);
+            const nombreProducto = productoInfo ? productoInfo.name : producto.descripcion;
+            
+            const modal = document.getElementById('shareModal');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            const progreso = ((index + 1) / data.productos.length * 100).toFixed(0);
+            
+            let html = `
+                <div style="margin-bottom: 15px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                        <span style="font-size: 12px; color: #64748b;">Producto ${index + 1} de ${data.productos.length}</span>
+                        <span style="font-size: 12px; font-weight: 600; color: #059669;">${progreso}%</span>
+                    </div>
+                    <div style="width: 100%; height: 6px; background: #e2e8f0; border-radius: 3px; overflow: hidden;">
+                        <div style="width: ${progreso}%; height: 100%; background: linear-gradient(90deg, #059669, #10b981); transition: width 0.3s;"></div>
+                    </div>
+                </div>
+                
+                <div style="background: #f8fafc; border-radius: 12px; padding: 20px; margin-bottom: 20px; text-align: center;">
+                    <div style="font-size: 12px; color: #64748b; margin-bottom: 5px;">SKU ${producto.sku}</div>
+                    <div style="font-size: 15px; font-weight: 600; color: #1e293b; margin-bottom: 15px; line-height: 1.4;">${nombreProducto}</div>
+                    
+                    <div style="background: white; border-radius: 8px; padding: 15px; border: 2px solid #e2e8f0;">
+                        <div style="font-size: 13px; color: #64748b; margin-bottom: 5px;">Cantidad en guía</div>
+                        <div style="font-size: 42px; font-weight: 800; color: #1e293b;">${producto.cantidad}</div>
+                    </div>
+                </div>
+                
+                <div style="font-size: 15px; font-weight: 600; color: #1e293b; margin-bottom: 15px; text-align: center;">
+                    ¿Recibió ${producto.cantidad} unidades?
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-bottom: 15px;">
+                    <button onclick="confirmarProductoVerificacion(${producto.cantidad})" 
+                            style="flex: 1; padding: 16px; border: 2px solid #059669; background: #f0fdf4; color: #059669; border-radius: 12px; font-weight: 700; font-size: 15px; cursor: pointer;">
+                        ✓ Sí
+                    </button>
+                    <button onclick="mostrarInputDiferencia()" 
+                            style="flex: 1; padding: 16px; border: 2px solid #dc2626; background: #fef2f2; color: #dc2626; border-radius: 12px; font-weight: 700; font-size: 15px; cursor: pointer;">
+                        ✗ No
+                    </button>
+                </div>
+                
+                <button onclick="cancelarVerificacion()" 
+                        style="width: 100%; padding: 10px; background: #e2e8f0; color: #64748b; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;">
+                    Cancelar
+                </button>
+            `;
+            
+            modal.querySelector('.modal-title').textContent = `Guía #${data.numeroFactura}`;
+            modalContent.innerHTML = html;
+        }
+        
+        function mostrarInputDiferencia() {
+            const data = window.tempProductosCargar;
+            const index = window.verificacionIndex || 0;
+            const producto = data.productos[index];
+            
+            const modal = document.getElementById('shareModal');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            let html = `
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 12px; color: #64748b;">SKU ${producto.sku}</div>
+                    <div style="font-size: 14px; font-weight: 600; color: #1e293b; margin-top: 5px;">${producto.descripcion}</div>
+                </div>
+                
+                <div style="background: #fef2f2; border-radius: 12px; padding: 20px; margin-bottom: 20px;">
+                    <div style="font-size: 13px; color: #991b1b; margin-bottom: 15px; text-align: center;">
+                        Esperado: <strong>${producto.cantidad}</strong> unidades
+                    </div>
+                    
+                    <label style="display: block; font-weight: 600; margin-bottom: 8px; color: #1e293b; text-align: center;">¿Cuántas recibió?</label>
+                    <input type="number" id="inputCantidadRecibida" min="0" value="0" 
+                           style="width: 100%; padding: 15px; border: 2px solid #dc2626; border-radius: 8px; font-size: 28px; font-weight: 700; text-align: center;">
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="mostrarProductoVerificacion()" 
+                            style="flex: 1; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        ← Volver
+                    </button>
+                    <button onclick="confirmarCantidadDiferenteModal()" 
+                            style="flex: 1; padding: 12px; background: #dc2626; color: white; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        Confirmar
+                    </button>
+                </div>
+            `;
+            
+            modal.querySelector('.modal-title').textContent = 'Cantidad diferente';
+            modalContent.innerHTML = html;
+            
+            setTimeout(() => {
+                const input = document.getElementById('inputCantidadRecibida');
+                if (input) {
+                    input.focus();
+                    input.select();
+                }
+            }, 100);
+        }
+        
+        function confirmarProductoVerificacion(cantidad) {
+            const data = window.tempProductosCargar;
+            const index = window.verificacionIndex || 0;
+            
+            data.productos[index].cantidadRecibida = cantidad;
+            data.productos[index].verificado = true;
+            
+            window.verificacionIndex = index + 1;
+            mostrarProductoVerificacion();
+        }
+        
+        function confirmarCantidadDiferenteModal() {
+            const cantidad = parseInt(document.getElementById('inputCantidadRecibida')?.value) || 0;
+            confirmarProductoVerificacion(cantidad);
+        }
+        
+        function cancelarVerificacion() {
+            if (confirm('¿Cancelar verificación?\n\nSe perderá el progreso.')) {
+                window.tempProductosCargar = null;
+                window.verificacionIndex = 0;
+                closeShareModal();
+            }
+        }
+        
+        function mostrarResumenVerificacion() {
+            const data = window.tempProductosCargar;
+            if (!data) return;
+            
+            const modal = document.getElementById('shareModal');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            let totalEsperado = 0;
+            let totalRecibido = 0;
+            let productosOK = 0;
+            let productosDiff = 0;
+            
+            data.productos.forEach(p => {
+                totalEsperado += p.cantidad;
+                totalRecibido += p.cantidadRecibida;
+                if (p.cantidadRecibida === p.cantidad) {
+                    productosOK++;
+                } else {
+                    productosDiff++;
+                }
+            });
+            
+            const diferencia = totalRecibido - totalEsperado;
+            
+            let html = `
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <div style="font-size: 40px; margin-bottom: 10px;">${productosDiff > 0 ? '⚠️' : '✅'}</div>
+                    <div style="font-weight: 700; color: #1e293b; font-size: 16px;">Verificación Completada</div>
+                </div>
+                
+                <div style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 15px;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; text-align: center;">
+                        <div style="background: white; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: #64748b;">Esperado</div>
+                            <div style="font-size: 22px; font-weight: 700;">${totalEsperado}</div>
+                        </div>
+                        <div style="background: white; padding: 10px; border-radius: 8px;">
+                            <div style="font-size: 11px; color: #64748b;">Recibido</div>
+                            <div style="font-size: 22px; font-weight: 700; color: ${diferencia === 0 ? '#059669' : '#dc2626'};">${totalRecibido}</div>
+                        </div>
+                    </div>
+                    <div style="margin-top: 10px; text-align: center; padding: 8px; background: ${diferencia === 0 ? '#f0fdf4' : '#fef2f2'}; border-radius: 8px;">
+                        <span style="color: ${diferencia === 0 ? '#059669' : '#dc2626'}; font-weight: 600; font-size: 13px;">
+                            Diferencia: ${diferencia >= 0 ? '+' : ''}${diferencia}
+                        </span>
+                    </div>
+                    <div style="display: flex; justify-content: space-around; margin-top: 10px; font-size: 12px;">
+                        <span style="color: #059669;">✓ ${productosOK} OK</span>
+                        <span style="color: #dc2626;">⚠ ${productosDiff} dif.</span>
+                    </div>
+                </div>
+                
+                <div style="max-height: 150px; overflow-y: auto; margin-bottom: 15px; background: #f8fafc; border-radius: 8px; padding: 10px;">
+                    <div style="font-size: 11px; font-weight: 600; color: #64748b; margin-bottom: 8px;">Detalle:</div>
+                    ${data.productos.map(p => {
+                        const diff = p.cantidadRecibida - p.cantidad;
+                        const color = diff === 0 ? '#059669' : '#dc2626';
+                        return `
+                            <div style="display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #e2e8f0; font-size: 11px;">
+                                <span style="color: #1e293b; flex: 1;">${p.sku}</span>
+                                <span style="color: #64748b; margin-right: 10px;">${p.cantidad}→${p.cantidadRecibida}</span>
+                                <span style="color: ${color}; font-weight: 600; width: 40px; text-align: right;">${diff >= 0 ? '+' : ''}${diff}</span>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                
+                <div style="display: flex; gap: 10px; flex-direction: column;">
+                    <button onclick="editarVerificacion()" style="width: 100%; padding: 12px; background: #f8fafc; color: #1e293b; border: 1px solid #e2e8f0; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        ✏️ Editar productos
+                    </button>
+                    <button onclick="irAFirmarVerificacion()" class="btn-cta" style="width: 100%;">
+                        ✍️ Firmar y Guardar
+                    </button>
+                </div>
+            `;
+            
+            modal.querySelector('.modal-title').textContent = `Guía #${data.numeroFactura}`;
+            modalContent.innerHTML = html;
+        }
+        
+        function editarVerificacion() {
+            const data = window.tempProductosCargar;
+            if (!data) return;
+            
+            const modal = document.getElementById('shareModal');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            let html = `
+                <div style="margin-bottom: 15px;">
+                    <div style="font-size: 13px; color: #64748b;">Edita las cantidades recibidas:</div>
+                </div>
+                
+                <div style="max-height: 350px; overflow-y: auto; margin-bottom: 15px;">
+                    ${data.productos.map((p, idx) => {
+                        const productoInfo = rawProducts.find(r => r.sku === p.sku);
+                        const nombre = productoInfo ? productoInfo.name : p.descripcion;
+                        return `
+                            <div style="background: #f8fafc; border-radius: 8px; padding: 12px; margin-bottom: 8px;">
+                                <div style="font-size: 11px; color: #64748b;">${p.sku}</div>
+                                <div style="font-size: 13px; font-weight: 600; color: #1e293b; margin: 4px 0;">${nombre}</div>
+                                <div style="display: flex; align-items: center; gap: 10px; margin-top: 8px;">
+                                    <span style="font-size: 12px; color: #64748b;">Guía: ${p.cantidad}</span>
+                                    <span style="font-size: 12px; color: #64748b;">→</span>
+                                    <input type="number" min="0" value="${p.cantidadRecibida}" 
+                                           onchange="actualizarCantidadProducto(${idx}, this.value)"
+                                           style="width: 70px; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 14px; font-weight: 600; text-align: center;">
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+                
+                <button onclick="mostrarResumenVerificacion()" class="btn-cta" style="width: 100%;">
+                    ← Volver al resumen
+                </button>
+            `;
+            
+            modal.querySelector('.modal-title').textContent = 'Editar Cantidades';
+            modalContent.innerHTML = html;
+        }
+        
+        function actualizarCantidadProducto(index, valor) {
+            const data = window.tempProductosCargar;
+            if (data && data.productos[index]) {
+                data.productos[index].cantidadRecibida = parseInt(valor) || 0;
+            }
+        }
+        
+        function irAFirmarVerificacion() {
+            const data = window.tempProductosCargar;
+            if (!data) return;
+            
+            const modal = document.getElementById('shareModal');
+            const modalContent = modal.querySelector('.modal-content');
+            
+            let totalEsperado = 0;
+            let totalRecibido = 0;
+            data.productos.forEach(p => {
+                totalEsperado += p.cantidad;
+                totalRecibido += p.cantidadRecibida;
+            });
+            
+            let html = `
+                <div style="text-align: center; margin-bottom: 15px;">
+                    <div style="font-size: 14px; color: #64748b;">Guía #${data.numeroFactura}</div>
+                    <div style="font-size: 13px; color: #1e293b; margin-top: 5px;">
+                        ${data.productos.length} productos | Recibido: ${totalRecibido}/${totalEsperado}
+                    </div>
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">Nombre del receptor:</label>
+                    <input type="text" id="inputNombreVerif" placeholder="Ingrese su nombre" 
+                           style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 14px;">
+                </div>
+                
+                <div style="margin-bottom: 15px;">
+                    <label style="display: block; font-weight: 600; margin-bottom: 6px; font-size: 13px;">Firma:</label>
+                    <canvas id="canvasFirmaVerif" width="300" height="100" 
+                            style="width: 100%; height: 100px; border: 2px dashed #e2e8f0; border-radius: 8px; background: white; touch-action: none;"></canvas>
+                    <button onclick="limpiarCanvasVerif()" style="margin-top: 6px; padding: 6px 12px; background: #e2e8f0; border: none; border-radius: 6px; font-size: 11px; cursor: pointer;">
+                        🗑️ Limpiar
+                    </button>
+                </div>
+                
+                <div style="display: flex; gap: 10px;">
+                    <button onclick="mostrarResumenVerificacion()" style="flex: 1; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 8px; font-weight: 600; cursor: pointer;">
+                        ← Volver
+                    </button>
+                    <button onclick="guardarVerificacionFinal()" class="btn-cta" style="flex: 1;">
+                        💾 Guardar
+                    </button>
+                </div>
+            `;
+            
+            modal.querySelector('.modal-title').textContent = 'Firmar Recepción';
+            modalContent.innerHTML = html;
+            
+            setTimeout(initCanvasVerif, 100);
+        }
+        
+        function initCanvasVerif() {
+            const canvas = document.getElementById('canvasFirmaVerif');
+            if (!canvas) return;
+            
+            const ctx = canvas.getContext('2d');
+            let drawing = false;
+            
+            const getPos = (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+                const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+                return { x: x * (canvas.width / rect.width), y: y * (canvas.height / rect.height) };
+            };
+            
+            const start = (e) => { e.preventDefault(); drawing = true; const pos = getPos(e); ctx.beginPath(); ctx.moveTo(pos.x, pos.y); };
+            const draw = (e) => { if (!drawing) return; e.preventDefault(); const pos = getPos(e); ctx.lineTo(pos.x, pos.y); ctx.strokeStyle = '#1e293b'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.stroke(); };
+            const stop = () => { drawing = false; };
+            
+            canvas.addEventListener('mousedown', start);
+            canvas.addEventListener('mousemove', draw);
+            canvas.addEventListener('mouseup', stop);
+            canvas.addEventListener('mouseleave', stop);
+            canvas.addEventListener('touchstart', start, { passive: false });
+            canvas.addEventListener('touchmove', draw, { passive: false });
+            canvas.addEventListener('touchend', stop);
+        }
+        
+        function limpiarCanvasVerif() {
+            const canvas = document.getElementById('canvasFirmaVerif');
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+            }
+        }
+        
+        function guardarVerificacionFinal() {
+            const data = window.tempProductosCargar;
+            if (!data) return;
+            
+            const nombre = document.getElementById('inputNombreVerif')?.value || 'Sin nombre';
+            const canvas = document.getElementById('canvasFirmaVerif');
+            
+            if (!canvas) {
+                showToast('❌ Error');
+                return;
+            }
+            
+            const ctx = canvas.getContext('2d');
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const hasDrawing = imageData.data.some((channel, i) => i % 4 !== 3 && channel !== 0);
+            
+            if (!hasDrawing) {
+                showToast('⚠️ Por favor firme');
+                return;
+            }
+            
+            const firmaDataURL = canvas.toDataURL('image/png');
+            
+            let totalEsperado = 0;
+            let totalRecibido = 0;
+            let productosOK = 0;
+            let productosDiff = 0;
+            
+            data.productos.forEach(p => {
+                totalEsperado += p.cantidad;
+                totalRecibido += p.cantidadRecibida;
+                if (p.cantidadRecibida === p.cantidad) productosOK++;
+                else productosDiff++;
+            });
+            
+            const hoy = new Date().toISOString().split('T')[0];
+            const conteo = {
+                id: `Recepcion_${data.numeroFactura}_${Date.now()}`,
+                tipo: `Recepción Guía #${data.numeroFactura}`,
+                fecha: hoy,
+                nombre: nombre,
+                firma: firmaDataURL,
+                numeroGuia: data.numeroFactura,
+                datos: {},
+                productosDetalle: data.productos.map(p => ({
+                    sku: p.sku,
+                    descripcion: p.descripcion,
+                    esperado: p.cantidad,
+                    recibido: p.cantidadRecibida,
+                    diferencia: p.cantidadRecibida - p.cantidad
+                })),
+                totalEsperado,
+                totalRecibido,
+                productosOK,
+                productosDiff,
+                timestamp: new Date().getTime()
+            };
+            
+            data.productos.forEach(p => {
+                conteo.datos[p.sku] = p.cantidadRecibida;
+            });
+            
+            // Guardar en historial
+            let historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+            historial.unshift(conteo);
+            localStorage.setItem('historial_conteos', JSON.stringify(historial));
+            
+            conteoActualGuardado = conteo;
+            window.tempProductosCargar = null;
+            window.verificacionIndex = 0;
+            
+            showToast('✅ Recepción guardada');
+            closeShareModal();
+            
+            setTimeout(() => {
+                mostrarModalExportarConteo();
+            }, 200);
         }
         
         function mostrarModalReemplazar(numeroFactura, productos, existente) {
