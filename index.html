@@ -380,6 +380,27 @@
 </head>
 <body>
 
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; flex-direction: column;">
+        <div style="background: white; padding: 30px; border-radius: 16px; text-align: center; max-width: 280px;">
+            <div style="font-size: 40px; margin-bottom: 15px;">🤖</div>
+            <div style="font-weight: 700; color: #1e293b; font-size: 16px; margin-bottom: 10px;">Extrayendo información</div>
+            <div style="font-size: 13px; color: #64748b;">Analizando documento con AI...</div>
+            <div style="margin-top: 15px;">
+                <div style="width: 100%; height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden;">
+                    <div style="width: 30%; height: 100%; background: linear-gradient(90deg, #4a0404, #7f1d1d); animation: loading 1.5s infinite;"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <style>
+        @keyframes loading {
+            0% { width: 10%; margin-left: 0; }
+            50% { width: 50%; margin-left: 25%; }
+            100% { width: 10%; margin-left: 90%; }
+        }
+    </style>
+
     <input type="file" id="fileImport" accept=".csv,.txt" style="display:none" onchange="handleFileImport(this)">
     <input type="file" id="scanInput" accept="image/*" capture="environment" onchange="handleScan(this)">
     <input type="file" id="importExcelInput" accept=".xlsx,.xls" style="display:none" onchange="importarExcelRecepcion(this.files[0])">
@@ -3148,6 +3169,16 @@ function setupSearch() {
             setTimeout(() => t.classList.remove('show'), 2000);
         }
         
+        function mostrarLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.style.display = 'flex';
+        }
+        
+        function ocultarLoading() {
+            const overlay = document.getElementById('loadingOverlay');
+            if (overlay) overlay.style.display = 'none';
+        }
+        
         function handleScroll() {
             const btn = document.getElementById('floatingSaveBtn');
             const icon = document.getElementById('floatingIcon');
@@ -3472,7 +3503,7 @@ function ejecutarSumaInventario(data) {
         async function importarGuidaPDF(file) {
             if (!file) return;
             
-            showToast('🤖 Extrayendo información con AI...');
+            mostrarLoading();
             
             try {
                 const reader = new FileReader();
@@ -3484,11 +3515,13 @@ function ejecutarSumaInventario(data) {
                             canvas = await convertirPDFaImagen(e.target.result);
                         } catch (pdfError) {
                             console.error('Error en PDF.js:', pdfError);
+                            ocultarLoading();
                             showToast('❌ No se pudo procesar el PDF: ' + pdfError.message);
                             return;
                         }
                         
                         if (!canvas) {
+                            ocultarLoading();
                             showToast('❌ Error al convertir PDF a imagen');
                             return;
                         }
@@ -3498,7 +3531,6 @@ function ejecutarSumaInventario(data) {
                         console.log('📸 Imagen generada, tamaño:', (imageBase64.length / 1024).toFixed(2), 'KB');
                         
                         // Enviar a AI
-                        showToast('🤖 Extrayendo información con AI...');
                         const response = await fetch('/.netlify/functions/process-guia', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
@@ -3512,9 +3544,12 @@ function ejecutarSumaInventario(data) {
                             console.error('Error parseando JSON:', parseError);
                             const responseText = await response.text();
                             console.error('Respuesta recibida:', responseText.substring(0, 200));
+                            ocultarLoading();
                             showToast('❌ Error en respuesta de servidor. Intenta de nuevo.');
                             return;
                         }
+                        
+                        ocultarLoading();
                         
                         if (!result || !result.success) {
                             showToast('❌ ' + (result?.error || 'Error desconocido'));
@@ -3734,40 +3769,28 @@ function ejecutarSumaInventario(data) {
         }
         
         function iniciarVerificacionEnModal() {
-            console.log('🔄 iniciarVerificacionEnModal llamada');
-            console.log('tempProductosCargar:', window.tempProductosCargar);
-            
             if (!window.tempProductosCargar) {
                 showToast('❌ Error: No hay datos');
                 return;
             }
             
-            console.log('Productos:', window.tempProductosCargar.productos.length);
             window.verificacionIndex = 0;
-            console.log('Llamando mostrarProductoVerificacion...');
             mostrarProductoVerificacion();
         }
         
         function mostrarProductoVerificacion() {
-            console.log('🔄 mostrarProductoVerificacion llamada');
             const data = window.tempProductosCargar;
-            if (!data) {
-                console.error('No hay data');
-                return;
-            }
+            if (!data) return;
             
             const index = window.verificacionIndex || 0;
-            console.log('Index actual:', index, 'de', data.productos.length);
             
             // Si terminamos todos, mostrar resumen
             if (index >= data.productos.length) {
-                console.log('Todos verificados, mostrando resumen');
                 mostrarResumenVerificacion();
                 return;
             }
             
             const producto = data.productos[index];
-            console.log('Producto actual:', producto);
             const productoInfo = rawProducts.find(p => p.sku === producto.sku);
             const nombreProducto = productoInfo ? productoInfo.name : producto.descripcion;
             
