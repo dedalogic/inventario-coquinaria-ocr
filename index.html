@@ -3734,28 +3734,40 @@ function ejecutarSumaInventario(data) {
         }
         
         function iniciarVerificacionEnModal() {
+            console.log('🔄 iniciarVerificacionEnModal llamada');
+            console.log('tempProductosCargar:', window.tempProductosCargar);
+            
             if (!window.tempProductosCargar) {
                 showToast('❌ Error: No hay datos');
                 return;
             }
             
+            console.log('Productos:', window.tempProductosCargar.productos.length);
             window.verificacionIndex = 0;
+            console.log('Llamando mostrarProductoVerificacion...');
             mostrarProductoVerificacion();
         }
         
         function mostrarProductoVerificacion() {
+            console.log('🔄 mostrarProductoVerificacion llamada');
             const data = window.tempProductosCargar;
-            if (!data) return;
+            if (!data) {
+                console.error('No hay data');
+                return;
+            }
             
             const index = window.verificacionIndex || 0;
+            console.log('Index actual:', index, 'de', data.productos.length);
             
             // Si terminamos todos, mostrar resumen
             if (index >= data.productos.length) {
+                console.log('Todos verificados, mostrando resumen');
                 mostrarResumenVerificacion();
                 return;
             }
             
             const producto = data.productos[index];
+            console.log('Producto actual:', producto);
             const productoInfo = rawProducts.find(p => p.sku === producto.sku);
             const nombreProducto = productoInfo ? productoInfo.name : producto.descripcion;
             
