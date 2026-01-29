@@ -372,11 +372,121 @@
         .clear-history:hover {
             text-decoration: underline;
         }
-        .no-results {
+.no-results {
             padding: 20px;
             text-align: center;
             color: #94a3b8;
             font-size: 13px;
+        }
+
+        /* HISTORIAL MODERNO */
+        .history-card {
+            background: white;
+            border-radius: 16px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            border: 1px solid #f1f5f9;
+        }
+        .history-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+        .history-card-type {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .history-card-type.inventario {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            color: #166534;
+        }
+        .history-card-type.recepcion {
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            color: #92400e;
+        }
+        .history-card-delete {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: #fef2f2;
+            border: none;
+            color: #dc2626;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .history-card-title {
+            font-size: 16px;
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 4px;
+        }
+        .history-card-meta {
+            font-size: 12px;
+            color: #64748b;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .history-card-stats {
+            display: flex;
+            gap: 12px;
+            margin: 12px 0;
+            padding: 10px;
+            background: #f8fafc;
+            border-radius: 10px;
+        }
+        .history-stat {
+            flex: 1;
+            text-align: center;
+        }
+        .history-stat-value {
+            font-size: 18px;
+            font-weight: 700;
+            color: #1e293b;
+        }
+        .history-stat-label {
+            font-size: 10px;
+            color: #64748b;
+            text-transform: uppercase;
+        }
+        .history-stat.ok .history-stat-value { color: #059669; }
+        .history-stat.diff .history-stat-value { color: #dc2626; }
+        .history-card-actions {
+            display: flex;
+            gap: 8px;
+        }
+        .history-action-btn {
+            flex: 1;
+            padding: 10px;
+            border: none;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        .history-action-btn.primary {
+            background: linear-gradient(135deg, #4a0404 0%, #7f1d1d 100%);
+            color: white;
+        }
+        .history-action-btn.secondary {
+            background: #f1f5f9;
+            color: #475569;
         }
     </style>
 </head>
@@ -385,9 +495,9 @@
     <!-- Loading Overlay -->
     <div id="loadingOverlay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; justify-content: center; align-items: center; flex-direction: column;">
         <div style="background: white; padding: 30px; border-radius: 16px; text-align: center; max-width: 280px;">
-            <div style="font-size: 40px; margin-bottom: 15px;">🤖</div>
-            <div style="font-weight: 700; color: #1e293b; font-size: 16px; margin-bottom: 10px;">Extrayendo información</div>
-            <div style="font-size: 13px; color: #64748b;">Analizando documento con AI...</div>
+    <div style="font-size: 40px; margin-bottom: 15px;">☁️</div>
+<div style="font-weight: 700; color: #1e293b; font-size: 16px; margin-bottom: 10px;">Subiendo archivos...</div>
+<div style="font-size: 13px; color: #64748b;">Esto puede tomar unos segundos</div>
             <div style="margin-top: 15px;">
                 <div style="width: 100%; height: 4px; background: #e2e8f0; border-radius: 2px; overflow: hidden;">
                     <div style="width: 30%; height: 100%; background: linear-gradient(90deg, #4a0404, #7f1d1d); animation: loading 1.5s infinite;"></div>
@@ -544,7 +654,7 @@
 
     <div id="toast" class="toast"></div>
 
-    <script src="products.js"></script>
+    <script src="app.js"></script>
     <script>
         // ============================================
         // CONFIGURACIÓN GOOGLE SHEETS
@@ -553,7 +663,7 @@
         const GOOGLE_API_KEY = ''; // No necesario para OAuth
         const SPREADSHEET_ID = '1Z-XxiwIpWoZoc0ir0rTjOgKwmkwibrFzVWH9Fg5hu6A';
         const FOLDER_INVENTARIOS = '1SfsGcdSJ1Z7vv9QdAw-K505ZGy4EDs0C';
-        const FOLDER_RECEPCIONES = '1D267fOyyRMwBUFuM63_6HD3ObdlRAO63';
+        const FOLDER_RECEPCIONES = '1D167fOyyRMwBUFuM63_6HD3ObdlRAO63';
         const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
         
         let googleToken = null;
@@ -1594,15 +1704,17 @@ if (currentBrand !== 'Todas' && !searchTerm) {
             abrirModalFirma(`Recepción #${currentDocNumber}`);
         }
         
-        function abrirModalFirma(tipo) {
-            const modal = document.getElementById('firmaModal');
-            const modalContent = document.getElementById('firmaModalContent');
-            
-            modal.querySelector('.modal-title').textContent = `Finalizar ${tipo}`;
-            
-            let html = `
-                <div style="margin-bottom: 20px;">
-                    <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 500;">Nombre:</label>
+function abrirModalFirma(tipo) {
+    const modal = document.getElementById('firmaModal');
+    const modalContent = document.getElementById('firmaModalContent');
+    
+    modal.querySelector('.modal-title').textContent = `Finalizar ${tipo}`;
+    
+    let html = `
+        <button onclick="cerrarFirmaModal()" style="position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 50%; background: #f1f5f9; border: none; font-size: 16px; color: #64748b; cursor: pointer;">✕</button>
+        
+        <div style="margin-bottom: 20px;">
+            <label style="display: block; font-size: 12px; color: #64748b; margin-bottom: 8px; font-weight: 500;">Nombre:</label>
                     <input type="text" id="inputNombre" placeholder="Ej: Juan Pérez" style="width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 13px; font-family: 'Inter', sans-serif;">
                 </div>
                 
@@ -2291,69 +2403,101 @@ if (currentBrand !== 'Todas' && !searchTerm) {
             }
         }
         
-        function renderHistory() {
-            const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
-            const container = document.getElementById('historyContent');
+function renderHistory() {
+    const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
+    const container = document.getElementById('historyContent');
+    
+    if (historial.length === 0) {
+        container.innerHTML = '<div class="empty-state">Sin registros aún</div>';
+        return;
+    }
+    
+    const searchInput = document.getElementById('historySearchInput');
+    const filterType = document.getElementById('historyFilterType');
+    const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+    const selectedType = filterType ? filterType.value : '';
+    
+    let filtrado = historial;
+    if (searchTerm || selectedType) {
+        filtrado = historial.filter(item => {
+            const fecha = item.fecha || '';
+            const numeroGuia = item.numeroGuia || '';
+            const responsable = item.nombre || '';
+            const tipo = item.tipo || '';
             
-            if (historial.length === 0) {
-                container.innerHTML = '<div class="empty-state">Sin registros aún</div>';
-                return;
-            }
+            const cumpleBusqueda = !searchTerm || 
+                   fecha.toLowerCase().includes(searchTerm) || 
+                   numeroGuia.toLowerCase().includes(searchTerm) ||
+                   responsable.toLowerCase().includes(searchTerm);
             
-            // Obtener término de búsqueda y filtro
-            const searchInput = document.getElementById('historySearchInput');
-            const filterType = document.getElementById('historyFilterType');
-            const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
-            const selectedType = filterType ? filterType.value : '';
+            const cumpleTipo = !selectedType || tipo.includes(selectedType);
             
-            // Filtrar por fecha, número de guía, responsable y tipo
-            let filtrado = historial;
-            if (searchTerm || selectedType) {
-                filtrado = historial.filter(item => {
-                    const fecha = item.fecha || '';
-                    const numeroGuia = item.numeroGuia || '';
-                    const responsable = item.nombre || '';
-                    const tipo = item.tipo || '';
-                    
-                    const cumpleBusqueda = !searchTerm || 
-                           fecha.toLowerCase().includes(searchTerm) || 
-                           numeroGuia.toLowerCase().includes(searchTerm) ||
-                           responsable.toLowerCase().includes(searchTerm);
-                    
-                    const cumpletipo = !selectedType || tipo.includes(selectedType);
-                    
-                    return cumpleBusqueda && cumpletipo;
-                });
-            }
-            
-            if (filtrado.length === 0 && (searchTerm || selectedType)) {
-                container.innerHTML = '<div class="empty-state">No se encontraron registros</div>';
-                return;
-            }
-            
-            container.innerHTML = filtrado.map(item => `
-                <div class="history-item" data-id="${item.id}" 
-                     style="background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden;">
-                    <div style="flex: 1;" 
-                         ontouchstart="iniciarSwipeHistorial(event, '${item.id}')"
-                         ontouchmove="moverSwipeHistorial(event, '${item.id}')"
-                         ontouchend="finalizarSwipeHistorial(event, '${item.id}')"
-                         oncontextmenu="mostrarMenuBorrar(event, '${item.id}')">
-                        <div style="font-weight: 600; color: #1e293b; font-size: 14px;">
-                            ${item.tipo.includes('Recepción') ? `Guía #${item.numeroGuia}` : 'Inventario'}
-                        </div>
-                        <div style="font-size: 12px; color: #64748b; margin-top: 4px;">${item.fecha} • ${item.nombre}</div>
-                        ${item.totalEsperado ? `<div style="font-size: 11px; color: #059669; margin-top: 2px;">✓ ${item.productosOK || 0} OK | ⚠ ${item.productosDiff || 0} dif.</div>` : ''}
-                    </div>
-                    <div style="display: flex; gap: 6px; align-items: center;">
-                        <button onclick="cargarDelHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">📂</button>
-                        <button onclick="generarPDFDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">PDF</button>
-                        <button onclick="generarExcelDesdeHistorial('${item.id}')" style="background: #4a0404; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">XLS</button>
-                        <button onclick="confirmarBorrarHistorial('${item.id}')" style="background: #991b1b; color: white; border: none; padding: 8px 10px; border-radius: 6px; font-size: 11px; cursor: pointer; font-weight: 600;">🗑️</button>
-                    </div>
+            return cumpleBusqueda && cumpleTipo;
+        });
+    }
+    
+    if (filtrado.length === 0) {
+        container.innerHTML = '<div class="empty-state">No se encontraron registros</div>';
+        return;
+    }
+    
+    container.innerHTML = filtrado.map(item => {
+        const esRecepcion = item.tipo.includes('Recepción');
+        const titulo = esRecepcion ? `Guía #${item.numeroGuia || 'S/N'}` : `Inventario`;
+        const totalProductos = Object.keys(item.datos || {}).filter(k => item.datos[k] > 0).length;
+        const totalUnidades = Object.values(item.datos || {}).reduce((a, b) => a + (b || 0), 0);
+        
+        return `
+            <div class="history-card">
+                <div class="history-card-header">
+                    <span class="history-card-type ${esRecepcion ? 'recepcion' : 'inventario'}">
+                        ${esRecepcion ? '📦 Recepción' : '📋 Inventario'}
+                    </span>
+                    <button class="history-card-delete" onclick="confirmarBorrarHistorial('${item.id}')" title="Eliminar">✕</button>
                 </div>
-            `).join('');
-        }
+                
+                <div class="history-card-title">${titulo}</div>
+                <div class="history-card-meta">
+                    <span>📅 ${item.fecha}</span>
+                    <span>👤 ${item.nombre || 'Sin nombre'}</span>
+                </div>
+                
+                <div class="history-card-stats">
+                    <div class="history-stat">
+                        <div class="history-stat-value">${totalProductos}</div>
+                        <div class="history-stat-label">Productos</div>
+                    </div>
+                    <div class="history-stat">
+                        <div class="history-stat-value">${totalUnidades}</div>
+                        <div class="history-stat-label">Unidades</div>
+                    </div>
+                    ${item.productosOK !== undefined ? `
+                    <div class="history-stat ok">
+                        <div class="history-stat-value">${item.productosOK || 0}</div>
+                        <div class="history-stat-label">OK</div>
+                    </div>
+                    <div class="history-stat diff">
+                        <div class="history-stat-value">${item.productosDiff || 0}</div>
+                        <div class="history-stat-label">Dif.</div>
+                    </div>
+                    ` : ''}
+                </div>
+                
+                <div class="history-card-actions">
+                    <button class="history-action-btn primary" onclick="cargarDelHistorial('${item.id}')">
+                        📂 Abrir
+                    </button>
+                    <button class="history-action-btn secondary" onclick="generarPDFDesdeHistorial('${item.id}')">
+                        PDF
+                    </button>
+                    <button class="history-action-btn secondary" onclick="generarExcelDesdeHistorial('${item.id}')">
+                        Excel
+                    </button>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
         
         function confirmarBorrarHistorial(id) {
             const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
