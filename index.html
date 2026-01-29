@@ -3502,117 +3502,61 @@ function ejecutarSumaInventario(data) {
         
         // MODO SIMULACIÓN - cambiar a false para producción
         const MODO_SIMULACION = true;
-        
         async function importarGuidaPDF(file) {
-            if (!file) return;
+    if (!file) return;
+    
+    mostrarLoading();
+    
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+        try {
+            let imageBase64;
             
-            mostrarLoading();
-            
-            // Si estamos en modo simulación, usar datos de prueba
-            if (MODO_SIMULACION) {
-                setTimeout(() => {
-                    ocultarLoading();
-                    
-                    // Datos simulados de una guía
-                    const folio = '12345678';
-                    const fecha = '28/01/2025';
-                    const productos = [
-                        { sku: '80003', descripcion: 'Espátula Coquinaria', cantidad: 5 },
-                        { sku: '80004', descripcion: 'Trincho para BBQ Coquinaria', cantidad: 3 },
-                        { sku: '80006', descripcion: 'Cuchara para Servir Coquinaria', cantidad: 10 },
-                        { sku: '80090', descripcion: 'Tabla quesos mármol', cantidad: 2 },
-                        { sku: '80420', descripcion: 'Mix 4 pimientas 340g', cantidad: 8 }
-                    ];
-                    
-                    currentDocNumber = folio;
-                    mostrarConfirmacionProductos(folio, fecha, productos);
-                }, 1500); // Simular 1.5 segundos de carga
-                return;
+            // Si es PDF, lo convertimos a imagen para que Vision AI lo lea mejor
+            if (file.type === "application/pdf") {
+                const canvas = await convertirPDFaImagen(e.target.result);
+                imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
+            } else {
+                imageBase64 = e.target.result;
             }
-            
-            try {
-                const reader = new FileReader();
-                reader.onload = async (e) => {
-                    try {
-                        // Convertir PDF a imagen primero
-                        let canvas;
-                        try {
-                            canvas = await convertirPDFaImagen(e.target.result);
-                        } catch (pdfError) {
-                            console.error('Error en PDF.js:', pdfError);
-                            ocultarLoading();
-                            showToast('❌ No se pudo procesar el PDF: ' + pdfError.message);
-                            return;
-                        }
-                        
-                        if (!canvas) {
-                            ocultarLoading();
-                            showToast('❌ Error al convertir PDF a imagen');
-                            return;
-                        }
-                        
-                        // Obtener imagen en base64
-                        const imageBase64 = canvas.toDataURL('image/jpeg', 0.8);
-                        console.log('📸 Imagen generada, tamaño:', (imageBase64.length / 1024).toFixed(2), 'KB');
-                        
-                        // Enviar a AI
-                        const response = await fetch('/.netlify/functions/process-guia', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ image: imageBase64 })
-                        });
-                        
-                        let result;
-                        try {
-                            result = await response.json();
-                        } catch (parseError) {
-                            console.error('Error parseando JSON:', parseError);
-                            const responseText = await response.text();
-                            console.error('Respuesta recibida:', responseText.substring(0, 200));
-                            ocultarLoading();
-                            showToast('❌ Error en respuesta de servidor. Intenta de nuevo.');
-                            return;
-                        }
-                        
-                        ocultarLoading();
-                        
-                        if (!result || !result.success) {
-                            showToast('❌ ' + (result?.error || 'Error desconocido'));
-                            return;
-                        }
-                        
-                        const folio = result.numeroFactura || result.numeroGuia || result.folio || '';
-                        const fecha = result.fechaOrden || result.fechaFactura || '';
-                        const productos = (result.productos || []).map(p => ({
-                            sku: p.codigo,
-                            descripcion: p.descripcion,
-                            cantidad: p.cantidad
-                        }));
-                        
-                        console.log('✅ Datos extraídos:', {folio, productos: productos.length});
-                        
-                        if (!folio || productos.length === 0) {
-                            showToast('❌ No se pudieron extraer los datos del PDF');
-                            return;
-                        }
-                        
-                        currentDocNumber = folio;
-                        document.getElementById('guideNumber').value = folio;
-                        
-                        mostrarConfirmacionProductos(folio, fecha, productos);
-                        
-                    } catch (error) {
-                        console.error('Error procesando PDF:', error);
-                        showToast('❌ Error al procesar el PDF: ' + error.message);
-                    }
+
+            const response = await fetch('/.netlify/functions/process-guia', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: imageBase64 })
+            });
+
+            const result = await response.json();
+            ocultarLoading();
+
+            if (result.success && result.productos.length > 0) {
+                window.tempProductosCargar = {
+                    numeroFactura: result.numeroGuia,
+                    productos: result.productos.map(p => ({
+                        sku: p.sku || p.codigo,
+                        descripcion: p.nombre || p.descripcion,
+                        cantidad: p.unidades || p.cantidad,
+                        cantidadRecibida: p.unidades || p.cantidad,
+                        verificado: false
+                    }))
                 };
-                reader.readAsArrayBuffer(file);
-            } catch (error) {
-                console.error('Error:', error);
-                showToast('❌ Error al leer el PDF');
+                mostrarConfirmacionProductos(result.numeroGuia, result.fecha, result.productos);
+            } else {
+                alert("No se pudo extraer información real del documento.");
             }
+        } catch (error) {
+            ocultarLoading();
+            alert("Error procesando el archivo.");
         }
-        
+    };
+    
+    if (file.type === "application/pdf") {
+        reader.readAsArrayBuffer(file);
+    } else {
+        reader.readAsDataURL(file);
+    }
+}
+
         async function convertirPDFaImagen(pdfArrayBuffer) {
             try {
                 // Cargar PDF.js si no está disponible
@@ -3740,58 +3684,79 @@ function ejecutarSumaInventario(data) {
             });
         }
         
-        function mostrarConfirmacionProductos(numeroFactura, fecha, productos) {
-            // Guardar datos en variable global
-            window.tempProductosCargar = {
-                numeroFactura: numeroFactura,
-                productos: productos.map(p => ({
-                    sku: p.sku,
-                    descripcion: p.descripcion,
-                    cantidad: p.cantidad,
-                    cantidadRecibida: p.cantidad, // Por defecto igual a lo esperado
-                    verificado: false
-                }))
-            };
+function mostrarConfirmacionProductos(numeroFactura, fecha, productos) {
+    // 1. Estandarizar y guardar datos en variable global para el proceso de verificación
+    // Esto asegura que no importa si la IA devuelve "sku" o "codigo", el sistema lo entienda
+    window.tempProductosCargar = {
+        numeroFactura: numeroFactura || 'Sin Número',
+        productos: productos.map(p => ({
+            sku: p.sku || p.codigo || 'S/N',
+            descripcion: p.nombre || p.descripcion || 'Sin descripción',
+            cantidad: parseInt(p.unidades || p.cantidad) || 0,
+            cantidadRecibida: parseInt(p.unidades || p.cantidad) || 0, // Por defecto asumimos que llegó todo
+            verificado: false
+        }))
+    };
+
+    const modal = document.getElementById('shareModal');
+    const modalContent = modal.querySelector('.modal-content');
+
+    // Calcular totales para el resumen
+    const totalUnidades = window.tempProductosCargar.productos.reduce((sum, p) => sum + p.cantidad, 0);
+    const totalItems = window.tempProductosCargar.productos.length;
+
+    let html = `
+        <div style="text-align: center; margin-bottom: 20px; padding-top: 10px;">
+            <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
+            <div style="font-weight: 700; color: #1e293b; font-size: 20px; letter-spacing: -0.5px;">
+                Guía Detectada
+            </div>
+            <div style="font-size: 14px; color: #4a0404; font-weight: 700; margin-top: 8px; background: #fff1f2; display: inline-block; padding: 6px 16px; border-radius: 20px; border: 1px solid #fecaca;">
+                Factura #${numeroFactura}
+            </div>
+        </div>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 12px; padding-bottom: 10px; border-bottom: 1px solid #edf2f7;">
+                <span style="color: #64748b; font-size: 13px;">Fecha del documento:</span>
+                <span style="font-weight: 600; color: #1e293b; font-size: 13px;">${fecha || 'No detectada'}</span>
+            </div>
             
-            const modal = document.getElementById('shareModal');
-            const modalContent = modal.querySelector('.modal-content');
-            
-            const totalUnidades = productos.reduce((sum, p) => sum + p.cantidad, 0);
-            
-            let html = `
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 48px; margin-bottom: 10px;">📋</div>
-                    <div style="font-weight: 700; color: #1e293b; font-size: 18px;">
-                        Guía #${numeroFactura}
-                    </div>
-                    <div style="font-size: 13px; color: #64748b; margin-top: 5px;">
-                        ${fecha ? `Fecha: ${fecha} | ` : ''}${productos.length} productos | ${totalUnidades} unidades
-                    </div>
+            <div style="display: flex; justify-content: space-between; align-items: center;">
+                <div style="text-align: left;">
+                    <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Items</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #1e293b;">${totalItems}</div>
                 </div>
-                
-                <div style="background: #f0fdf4; border-radius: 12px; padding: 15px; margin-bottom: 20px; text-align: center;">
-                    <div style="font-size: 14px; color: #166534; font-weight: 600;">
-                        ¿Iniciar verificación de recepción?
-                    </div>
-                    <div style="font-size: 12px; color: #15803d; margin-top: 5px;">
-                        Confirmarás la cantidad recibida de cada producto
-                    </div>
+                <div style="text-align: right;">
+                    <div style="font-size: 11px; color: #94a3b8; text-transform: uppercase; font-weight: 700;">Total Unidades</div>
+                    <div style="font-size: 20px; font-weight: 800; color: #059669;">${totalUnidades}</div>
                 </div>
-                
-                <div style="display: flex; gap: 10px; flex-direction: column;">
-                    <button onclick="alert('Botón presionado'); window.verificacionIndex=0; mostrarProductoVerificacion();" class="btn-cta" style="width: 100%;">
-                        ✅ Iniciar Verificación
-                    </button>
-                    <button onclick="closeShareModal()" style="width: 100%; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
-                        ✕ Cancelar
-                    </button>
-                </div>
-            `;
-            
-            modal.querySelector('.modal-title').textContent = 'Guía Detectada';
-            modalContent.innerHTML = html;
-            modal.classList.add('active');
-        }
+            </div>
+        </div>
+
+        <div style="background: #f0fdf4; border-radius: 10px; padding: 12px; margin-bottom: 25px; text-align: center; border: 1px solid #dcfce7;">
+            <div style="font-size: 13px; color: #166534; font-weight: 600;">
+                ¿Deseas iniciar la verificación de cantidades?
+            </div>
+        </div>
+
+        <div style="display: flex; gap: 12px; flex-direction: column;">
+            <button onclick="window.verificacionIndex=0; mostrarProductoVerificacion();" class="btn-cta" style="width: 100%; height: 54px; font-size: 16px; box-shadow: 0 4px 12px rgba(184, 92, 103, 0.2);">
+                ✅ Iniciar Verificación
+            </button>
+            <button onclick="closeShareModal()" style="width: 100%; padding: 14px; background: #f1f5f9; color: #64748b; border: none; border-radius: 12px; font-weight: 600; cursor: pointer; font-size: 14px;">
+                ✕ Cancelar
+            </button>
+        </div>
+    `;
+
+    // Actualizamos el título del modal y el contenido
+    modal.querySelector('.modal-title').textContent = 'Resumen de Escaneo';
+    modalContent.innerHTML = html;
+    
+    // Mostramos el modal
+    modal.classList.add('active');
+}
         
         function iniciarVerificacionEnModal() {
             if (!window.tempProductosCargar) {
