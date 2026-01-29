@@ -379,40 +379,34 @@
             font-size: 13px;
         }
 
-/* HISTORIAL MODERNO - ACTUALIZADO */
-.history-card {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+/* CARD BASE */
+.history-card.compact {
+    background: #fff;
     border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.05);
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 12px;
 }
 
+/* HEADER */
 .history-card-header {
+    grid-column: 1 / -1;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 16px;
-    padding-bottom: 12px;
-    border-bottom: 1px solid #f1f5f9;
 }
 
 .history-card-type {
-    display: inline-flex;
-    align-items: center;
-    padding: 6px 14px;
-    border-radius: 6px;
-    font-size: 11px;
+    font-size: 10px;
     font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 999px;
+    letter-spacing: .6px;
     text-transform: uppercase;
-    letter-spacing: 0.8px;
-}
-
-.history-card-type.inventario {
-    background: #f0fdf4;
-    color: #166534;
-    border: 1px solid #86efac;
 }
 
 .history-card-type.recepcion {
@@ -421,123 +415,88 @@
     border: 1px solid #fde68a;
 }
 
+.history-card-type.inventario {
+    background: #f0fdf4;
+    color: #166534;
+    border: 1px solid #86efac;
+}
+
+/* DELETE */
 .history-card-delete {
-    width: 32px;
-    height: 32px;
-    border-radius: 6px;
-    background: #fef2f2;
-    border: 1px solid #fecaca;
+    background: transparent;
+    border: none;
+    font-size: 20px;
     color: #dc2626;
-    font-size: 18px;
     cursor: pointer;
+    line-height: 1;
+}
+
+/* MAIN CONTENT */
+.history-main {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
+    flex-direction: column;
+    gap: 4px;
 }
 
-.history-card-delete:hover {
-    background: #fee2e2;
-    transform: scale(1.05);
-}
-
-.history-card-title {
-    font-size: 18px;
+.history-title {
+    font-size: 16px;
     font-weight: 700;
     color: #1e293b;
-    margin-bottom: 8px;
 }
 
-.history-card-meta {
-    font-size: 13px;
+.history-meta {
+    font-size: 12px;
     color: #64748b;
     display: flex;
-    gap: 16px;
-    margin-bottom: 16px;
-}
-
-.history-card-meta span {
-    display: flex;
-    align-items: center;
     gap: 6px;
 }
 
-.history-card-stats {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+/* STATS INLINE */
+.history-stats-inline {
+    display: flex;
+    flex-wrap: wrap;
     gap: 12px;
-    margin-bottom: 16px;
+    font-size: 12px;
+    color: #475569;
+    margin-top: 6px;
 }
 
-.history-stat {
-    background: #f8fafc;
-    padding: 12px;
-    border-radius: 8px;
-    text-align: center;
-}
-
-.history-stat-label {
-    font-size: 11px;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-    margin-bottom: 4px;
-    font-weight: 600;
-}
-
-.history-stat-value {
-    font-size: 24px;
+.history-stats-inline strong {
     font-weight: 700;
     color: #1e293b;
 }
 
-.history-stat.ok .history-stat-value { 
-    color: #059669; 
-}
+.history-stats-inline .ok strong { color: #059669; }
+.history-stats-inline .diff strong { color: #dc2626; }
 
-.history-stat.diff .history-stat-value { 
-    color: #dc2626; 
-}
-
-.history-card-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 8px;
-}
-
-.history-action-btn {
-    padding: 10px;
-    border: none;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    cursor: pointer;
+/* ACTIONS */
+.history-actions {
     display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: all 0.2s;
+    gap: 6px;
+    align-items: flex-end;
 }
 
-.history-action-btn.primary {
-    background: linear-gradient(135deg, #4a0404 0%, #7f1d1d 100%);
-    color: white;
+.history-btn {
+    height: 32px;
+    padding: 0 12px;
+    font-size: 12px;
+    font-weight: 600;
+    border-radius: 8px;
+    cursor: pointer;
+    border: none;
 }
 
-.history-action-btn.primary:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(74, 4, 4, 0.3);
+.history-btn.primary {
+    background: linear-gradient(135deg, #4a0404, #7f1d1d);
+    color: #fff;
 }
 
-.history-action-btn.secondary {
+.history-btn.secondary {
     background: #f1f5f9;
-    color: #475569;
     border: 1px solid #e2e8f0;
+    color: #475569;
 }
 
-.history-action-btn.secondary:hover {
-    background: #e2e8f0;
-    transform: translateY(-1px);
-}
     </style>
 </head>
 <body>
@@ -2456,98 +2415,82 @@ function abrirModalFirma(tipo) {
 function renderHistory() {
     const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
     const container = document.getElementById('historyContent');
-    
-    if (historial.length === 0) {
-        container.innerHTML = '<div class="empty-state">Sin registros aún</div>';
+
+    if (!historial.length) {
+        container.innerHTML = '<div class="empty-state">Sin registros guardados</div>';
         return;
     }
-    
+
     const searchInput = document.getElementById('historySearchInput');
     const filterType = document.getElementById('historyFilterType');
     const searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
     const selectedType = filterType ? filterType.value : '';
-    
-    let filtrado = historial;
-    if (searchTerm || selectedType) {
-        filtrado = historial.filter(item => {
-            const fecha = item.fecha || '';
-            const numeroGuia = item.numeroGuia || '';
-            const responsable = item.nombre || '';
-            const tipo = item.tipo || '';
-            
-            const cumpleBusqueda = !searchTerm || 
-                   fecha.toLowerCase().includes(searchTerm) || 
-                   numeroGuia.toLowerCase().includes(searchTerm) ||
-                   responsable.toLowerCase().includes(searchTerm);
-            
-            const cumpleTipo = !selectedType || tipo.includes(selectedType);
-            
-            return cumpleBusqueda && cumpleTipo;
-        });
-    }
-    
-    if (filtrado.length === 0) {
+
+    const filtrado = historial.filter(item => {
+        const fecha = item.fecha || '';
+        const numeroGuia = item.numeroGuia || '';
+        const responsable = item.nombre || '';
+        const tipo = item.tipo || '';
+
+        const cumpleBusqueda = !searchTerm ||
+            fecha.toLowerCase().includes(searchTerm) ||
+            numeroGuia.toLowerCase().includes(searchTerm) ||
+            responsable.toLowerCase().includes(searchTerm);
+
+        const cumpleTipo = !selectedType || tipo.includes(selectedType);
+        return cumpleBusqueda && cumpleTipo;
+    });
+
+    if (!filtrado.length) {
         container.innerHTML = '<div class="empty-state">No se encontraron registros</div>';
         return;
     }
-    
+
     container.innerHTML = filtrado.map(item => {
         const esRecepcion = item.tipo.includes('Recepción');
-        const titulo = esRecepcion ? `Guía #${item.numeroGuia || 'S/N'}` : `Inventario`;
+        const titulo = esRecepcion ? `Guía #${item.numeroGuia || 'S/N'}` : 'Inventario';
+
         const totalProductos = Object.keys(item.datos || {}).filter(k => item.datos[k] > 0).length;
         const totalUnidades = Object.values(item.datos || {}).reduce((a, b) => a + (b || 0), 0);
-        
+
         return `
-            <div class="history-card">
-                <div class="history-card-header">
-                    <span class="history-card-type ${esRecepcion ? 'recepcion' : 'inventario'}">
-                        ${esRecepcion ? '📦 Recepción' : '📋 Inventario'}
-                    </span>
-                    <button class="history-card-delete" onclick="confirmarBorrarHistorial('${item.id}')" title="Eliminar">✕</button>
+        <div class="history-card compact">
+            <div class="history-card-header">
+                <span class="history-card-type ${esRecepcion ? 'recepcion' : 'inventario'}">
+                    ${esRecepcion ? 'Recepción' : 'Inventario'}
+                </span>
+                <button class="history-card-delete"
+                    onclick="confirmarBorrarHistorial('${item.id}')"
+                    aria-label="Eliminar">×</button>
+            </div>
+
+            <div class="history-main">
+                <div class="history-title">${titulo}</div>
+                <div class="history-meta">
+                    <span>${item.fecha}</span>
+                    <span>•</span>
+                    <span>${item.nombre || 'Sin responsable'}</span>
                 </div>
-                
-                <div class="history-card-title">${titulo}</div>
-                <div class="history-card-meta">
-                    <span>📅 ${item.fecha}</span>
-                    <span>👤 ${item.nombre || 'Sin nombre'}</span>
-                </div>
-                
-                <div class="history-card-stats">
-                    <div class="history-stat">
-                        <div class="history-stat-value">${totalProductos}</div>
-                        <div class="history-stat-label">Productos</div>
-                    </div>
-                    <div class="history-stat">
-                        <div class="history-stat-value">${totalUnidades}</div>
-                        <div class="history-stat-label">Unidades</div>
-                    </div>
+
+                <div class="history-stats-inline">
+                    <span><strong>${totalProductos}</strong> productos</span>
+                    <span><strong>${totalUnidades}</strong> unidades</span>
                     ${item.productosOK !== undefined ? `
-                    <div class="history-stat ok">
-                        <div class="history-stat-value">${item.productosOK || 0}</div>
-                        <div class="history-stat-label">OK</div>
-                    </div>
-                    <div class="history-stat diff">
-                        <div class="history-stat-value">${item.productosDiff || 0}</div>
-                        <div class="history-stat-label">Dif.</div>
-                    </div>
+                        <span class="ok"><strong>${item.productosOK || 0}</strong> OK</span>
+                        <span class="diff"><strong>${item.productosDiff || 0}</strong> dif.</span>
                     ` : ''}
                 </div>
-                
-                <div class="history-card-actions">
-                    <button class="history-action-btn primary" onclick="cargarDelHistorial('${item.id}')">
-                        📂 Abrir
-                    </button>
-                    <button class="history-action-btn secondary" onclick="generarPDFDesdeHistorial('${item.id}')">
-                        PDF
-                    </button>
-                    <button class="history-action-btn secondary" onclick="generarExcelDesdeHistorial('${item.id}')">
-                        Excel
-                    </button>
-                </div>
             </div>
-        `;
+
+            <div class="history-actions">
+                <button class="history-btn primary" onclick="cargarDelHistorial('${item.id}')">Abrir</button>
+                <button class="history-btn secondary" onclick="generarPDFDesdeHistorial('${item.id}')">PDF</button>
+                <button class="history-btn secondary" onclick="generarExcelDesdeHistorial('${item.id}')">Excel</button>
+            </div>
+        </div>`;
     }).join('');
 }
+
         
         function confirmarBorrarHistorial(id) {
             const historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
