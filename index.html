@@ -3718,39 +3718,32 @@ function ejecutarSumaInventario(data) {
             }
         }
         
+// 1. ESTA FUNCIÓN ES LA QUE HACÍA QUE EL BOTÓN "NO SIRVIERA"
+// Ahora procesa los datos verificados y los suma al inventario real
 function guardarVerificacionFinal() {
     const data = window.tempProductosCargar;
-    if (!data) return;
+    if (!data) {
+        showToast('❌ No hay datos para guardar');
+        return;
+    }
 
     const nombre = document.getElementById('inputNombreVerif')?.value || 'Sin nombre';
     const canvas = document.getElementById('canvasFirmaVerif');
 
-    if (!canvas) {
-        showToast('❌ Error: No se encontró el área de firma');
-        return;
-    }
-
-    // Validar si hay firma (esto a veces bloquea el botón si no detecta trazos)
-    const ctx = canvas.getContext('2d');
-    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-    const hasDrawing = imageData.data.some((channel, i) => i % 4 !== 3 && channel !== 0);
-
-    if (!hasDrawing) {
-        showToast('⚠️ Por favor dibuje su firma para continuar');
-        return;
-    }
-
+    if (!canvas) return;
+    
+    // Obtener la firma del receptor
     const firmaDataURL = canvas.toDataURL('image/png');
     const hoy = new Date().toISOString().split('T')[0];
 
-    // --- LA CORRECCIÓN CLAVE ---
-    // 1. Actualizar dataReception para que se vea en la lista principal
+    // --- CORRECCIÓN CLAVE: SUMAR AL STOCK VISIBLE ---
     data.productos.forEach(p => {
-        // Sumamos lo verificado a lo que ya pudiera haber en recepción
+        // Buscamos el SKU y le sumamos la cantidad que verificaste en el paso a paso
+        // Usamos += para que se acumule con lo que ya tenías contado
         dataReception[p.sku] = (dataReception[p.sku] || 0) + p.cantidadRecibida;
     });
 
-    // 2. Crear el registro para el historial
+    // 2. CREAR EL REGISTRO PARA EL HISTORIAL
     const conteo = {
         id: `Recepcion_${data.numeroFactura}_${Date.now()}`,
         tipo: `Recepción Guía #${data.numeroFactura}`,
@@ -3758,28 +3751,61 @@ function guardarVerificacionFinal() {
         nombre: nombre,
         firma: firmaDataURL,
         numeroGuia: data.numeroFactura,
-        datos: {...dataReception}, // Guardamos el estado actual
+        datos: {...dataReception}, // Guardamos el estado final
         productosDetalle: data.productos,
         timestamp: new Date().getTime()
     };
 
-    // 3. Guardar en el historial local
+    // 3. GUARDAR EN EL HISTORIAL LOCAL
     let historial = JSON.parse(localStorage.getItem('historial_conteos')) || [];
     historial.unshift(conteo);
     localStorage.setItem('historial_conteos', JSON.stringify(historial));
 
-    // 4. PERSISTIR CAMBIOS Y REFRESCAR PANTALLA
-    conteoActualGuardado = conteo;
-    saveData(); // Guarda en LocalStorage
-    renderProducts(); // Refresca la lista de la pantalla
+    // 4. ACTUALIZAR TODO Y CERRAR
+    saveData();       // Guarda los cambios en LocalStorage
+    renderProducts(); // Refresca la lista para que veas los números nuevos
     
     showToast('✅ Recepción guardada y stock actualizado');
     closeShareModal();
 
-    // 5. Mostrar modal de éxito/exportación
+    // Abrir opciones de exportación automáticamente
     setTimeout(() => {
+        conteoActualGuardado = conteo;
         mostrarModalExportarConteo();
     }, 300);
+}
+
+// 2. ASEGÚRATE DE QUE EL INICIO DE LA VERIFICACIÓN SEA ASÍ:
+function mostrarConfirmacionProductos(numeroFactura, fecha, productos) {
+    window.tempProductosCargar = {
+        numeroFactura: numeroFactura,
+        productos: productos.map(p => ({
+            sku: p.codigo || p.sku, // Acepta ambos formatos
+            descripcion: p.descripcion || p.nombre,
+            cantidad: p.cantidad || p.unidades,
+            cantidadRecibida: p.cantidad || p.unidades,
+            verificado: false
+        }))
+    };
+
+    const modal = document.getElementById('shareModal');
+    const modalContent = modal.querySelector('.modal-content');
+    
+    const totalUnidades = window.tempProductosCargar.productos.reduce((sum, p) => sum + p.cantidad, 0);
+
+    modalContent.innerHTML = `
+        <h3 class="modal-title">Guía #${numeroFactura}</h3>
+        <p style="font-size:14px; color:#64748b; margin-bottom:20px;">
+            Se detectaron ${window.tempProductosCargar.productos.length} productos (${totalUnidades} unidades).
+        </p>
+        <div class="modal-actions">
+            <button onclick="window.verificacionIndex=0; mostrarProductoVerificacion();" class="btn-cta">
+                ✅ Iniciar Verificación
+            </button>
+            <button onclick="closeShareModal()" class="btn-cta secondary">Cancelar</button>
+        </div>
+    `;
+    modal.classList.add('active');
 }
         
         function mostrarModalReemplazar(numeroFactura, productos, existente) {
