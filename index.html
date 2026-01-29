@@ -554,7 +554,7 @@
         const SPREADSHEET_ID = '1Z-XxiwIpWoZoc0ir0rTjOgKwmkwibrFzVWH9Fg5hu6A';
         const FOLDER_INVENTARIOS = '1SfsGcdSJ1Z7vv9QdAw-K505ZGy4EDs0C';
         const FOLDER_RECEPCIONES = '1D267fOyyRMwBUFuM63_6HD3ObdlRAO63';
-        const SCOPES = 'https://www.googleapis.com/auth/spreadsheets.readonly https://www.googleapis.com/auth/drive.file';
+        const SCOPES = 'https://www.googleapis.com/auth/spreadsheets https://www.googleapis.com/auth/drive.file';
         
         let googleToken = null;
         let tokenClient = null;
@@ -3467,7 +3467,7 @@ function ejecutarSumaInventario(data) {
                 </div>
                 
                 <div style="display: flex; gap: 10px; flex-direction: column;">
-                    <button onclick="alert('Botón presionado'); window.verificacionIndex=0; mostrarProductoVerificacion();" class="btn-cta" style="width: 100%;">
+                    <button onclick="window.verificacionIndex=0; mostrarProductoVerificacion();" class="btn-cta" style="width: 100%;">
                         Iniciar Verificación
                     </button>
                     <button onclick="closeShareModal()" style="width: 100%; padding: 12px; background: #e2e8f0; color: #64748b; border: none; border-radius: 6px; font-weight: 600; cursor: pointer;">
